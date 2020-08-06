@@ -378,10 +378,10 @@ If you submit evidence leading to a validator getting slashed, you get 1/512 of 
 
 As a general rule of thumb, the proposer of a block gets 1/8 of the rewards given to other validators in the block that they include. This ensures sufficient incentive to include attestations and other objects as well as incentive to produce blocks.
 
+<a id="inactivity-quotient" />
+
 | `INACTIVITY_PENALTY_QUOTIENT` | `uint64(2**24)` (= 16,777,216) |
 | -------------------------|---- |
-
-
 
 See the [Casper FFG paper](https://arxiv.org/abs/1710.09437) for a description of the inactivity leak, the mechanism by which if a chain fails to finalize, inactive validators start to suffer very high penalties until the validators that _are_ active get back up to above 2/3 of the total validator set (weighted by balance) and finalization can restart.
 
