@@ -122,12 +122,12 @@ Here, we have constants that are configurable, ie. if you adjust one of these up
 ### Misc
 
 | `ETH1_FOLLOW_DISTANCE` | `uint64(2**10)` (= 1,024) |
-| - | - | - |
+| - | - |
 
 To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 1,024` blocks). Assuming that the eth1 chain does not revert that far, this lets us rely on an assumption that if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 1024 blocks corresponds to a delay of ~3.7 hours (and note that getting an eth1 block _accepted_ into eth2 would take another ~1.7 hours). Historically, all problems on the eth1 net have been responded to within this period of time. Pushing this time to be even longer would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
 
 | `MAX_COMMITTEES_PER_SLOT` | `uint64(2**6)` (= 64) |
-| - | - | - |
+| - | - |
 
 In phase 0, the whole idea of having multiple committees per slot serves no function; rather, this is preparatory work for phase 1, where each committee will be assigned to a different shard. We plan to have 64 shards at the start. Having fewer shards would lead to insufficient scalability; having more would lead to two undesirable consequences:
 
@@ -135,7 +135,7 @@ In phase 0, the whole idea of having multiple committees per slot serves no func
 2. The minimum amount of ETH needed to reach a full-sized committee for every shard in every slot (now 32 ETH * 128 committee size * 64 shards per slot * 32 slots per epoch = 8,388,608 ETH) to be too high; we're reasonably confident we can get 8.3m ETH staking, but getting 16.7m ETH staking would be harder, and if we can't get that much, the system would be forced compromise by making cross-shard transactions take longer.
 
 | `TARGET_COMMITTEE_SIZE` | `uint64(2**7)` (= 128) |
-| - | - | - |
+| - | - |
 
 For a committee to be secure, the chance that 2/3 of it get corrupted in any given epoch (assuming <1/3 of the global validator set is made up of attackers) must be astronomically tiny. We can estimate this chance of corruption via binomial formulas:
 
@@ -155,14 +155,14 @@ For a committee to be secure, the chance that 2/3 of it get corrupted in any giv
 Calling `probge(128, 86, 1/3)` (86 is the smallest integer above 128 * 2/3) returns `5.55 * 10**-15` (ie. 5.55 in a quadrillion). This is an extremely low probability, with comfortable bounds to take into account the possibility an attacker will "grind" many random seeds to try to get a favorable committee (though this is extremely difficult with RANDAO and especially VDFs). If the committee size were 64, it would no longer sufficiently secure. Increasing it to 256 would add needless inefficiency.
 
 | `MAX_VALIDATORS_PER_COMMITTEE` | `uint64(2**11)` (= 2,048) |
-| - | - | - |
+| - | - |
 
 <a id="churn" />
 
 The maximum supported validator count is `2**22` (=4,194,304), or ~134 million ETH staking. Assuming 32 slots per epoch and 64 committees per slot, this gets us to a max 2048 validators in a committee.
 
 | `MIN_PER_EPOCH_CHURN_LIMIT` | `uint64(2**2)` (= 4)|
-| - | - | - |
+| - | - |
 |`CHURN_LIMIT_QUOTIENT` | `uint64(2**16)` (= 65,536) |
 
 These two parameters set the rate at which validators can enter and leave the validator set. The minimum rate is 4 entering + 4 leaving per epoch, but if there are enough validators this rate increases: if there are more than 262,144 validators (8,388,608 ETH) then an amount of validators equal to 1/65536 of the validator set size can enter, and the same amount can leave, per epoch.
@@ -182,24 +182,24 @@ Research:
 * Weak subjectivity in eth2 (by Aditya): https://notes.ethereum.org/@adiasg/weak-subjectvity-eth2
 
 | `SHUFFLE_ROUND_COUNT` | `uint64(90)` |
-| - | - | - |
+| - | - |
 
 Number of rounds in the swap-or-not shuffle; for more into see the [`compute_shuffled_index` function description](#compute_shuffled_index) below. Expert cryptographer advice told us `~4*log2(n)` is sufficient for safety; in our case, `n <= 2**22`, hence ~90 rounds.
 
 | `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `uint64(2**14)` (= 16,384) |
-| - | - | - |
+| - | - |
 
 Number of validators deposited needed to start the eth2 chain. This gives 524,288 ETH, high enough to put attacking out of the reach of all but a few very wealthy actors.
 
 | `MIN_GENESIS_TIME` | `uint64(1578009600)` (Jan 3, 2020) |
-| - | - | - |
+| - | - |
 
 Genesis will not start before this time, even if there are enough validators deposited.
 
 <a id="hysteresis" />
 
 | `HYSTERESIS_QUOTIENT` | `uint64(4)` |
-| - | - | - |
+| - | - |
 | `HYSTERESIS_DOWNWARD_MULTIPLIER` | `uint64(1)` |
 | `HYSTERESIS_UPWARD_MULTIPLIER` | `uint64(5)` |
 | `EFFECTIVE_BALANCE_INCREMENT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000) |
