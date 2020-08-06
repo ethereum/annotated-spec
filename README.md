@@ -2178,6 +2178,25 @@ The reason why we cannot do that here is that we want to only process activation
 
 Note that if two conflicting blocks _do_ get finalized, the first time that happens must have been done by attestations that shared a common last finalized block, and so at that point slashing for the double-finalization can happen.
 
+<a id="anti-correlation" />
+
+#### `[Aside: anti-correlation penalties in Eth2]`
+
+In eth2, **anti-correlation penalties** are penalties structured in such a way that you get penalized more for the same offense if many other validators perform that same offense at the same time. Anti-correlation penalties are done for a few reasons:
+
+1. It's generally a good economic principle to set the penalty for an action to be proportional to the harm caused by an action, and because of eth2's inherent decentralization, a single validator misbehaving often causes no harm to network performance at all, but a large fraction of validators misbehaving simultaneously can cause serious damage.
+2. This technique tries to separate out the case where a validator misbehaves due to an honest mistake (internet connection failure, two validator backups accidentally interfering with each other, etc) from the case where validators are trying to actively attack the network. Honest mistakes are only lightly punished, malice is punished to the maximum extent.
+3. It creates incentives for validators to make decisions that decorrelate their failures from other validators; for example: not running the same client, not being part of the same staking pool, not running on the same cloud service.
+
+We can see one example how (3) works by considering a scenario where there are two staking pools (or cloud services, or clients), one with 10% of total stake and the other with 20% of total stake. Suppose that the two have the same reliability; that is, each of them has the same chance of failing in any given time period. However, because of anti-correlation penalties, the second pool would suffer penalties twice as high, because the fact that 20% of validators fail instead of 10% itself doubles the penalties for each validator. Hence, for a new user it becomes less risky to join the first pool.
+
+There are two main types of anti-correlation penalties in eth2:
+
+* The **[inactivity leak](#inactivity-quotient)**: if you fail to produce an attestation, you normally get a small penalty, but if you do so when the chain is failing to finalize (ie. when >1/3 of other validators are failing to produce attestations), the penalties become much larger. This mechanism does have another purpose of ensuring the chain returns to a status where it can finalize, but it does serve the anti-correlation penalty function as well.
+* **Proportional slashing penalties**: if you get slashed, you lose `3s/D` of your deposit, where `s` is the total ETH of other validators that got slashed in the time period between 2 eeks before you were slashed and 2 eeks after you are slashed, and `D` is total deposits. For example, if there is 10 million ETH staking, you get slashed, and 300,000 ETH worth of validators got slashed within 2 eeks of you, you lose 9% of your deposit (this is in addition to the fixed 1/32 minimum penalty).
+
+The fact that slashed validators are exposed to 4 eeks of inactivity penalties is arguably also a sort of anti-correlation penalty, though it penalizes correlations between different types of misbehavior, which is somewhat different and less useful; the primary task of that rule is to prevent self-slashing from being a viable way of escaping inactivity leaks.
+
 #### Slashings
 
 ```python
@@ -2192,9 +2211,9 @@ def process_slashings(state: BeaconState) -> None:
             decrease_balance(state, ValidatorIndex(index), penalty)
 ```
 
-This is the code that processes the anti-correlation penalty rule (that if you get slashed, you can penalized a portion of your balance equal to three times the portion of all depositors that got slashed around the same time period; see [here](https://notes.ethereum.org/@vbuterin/rkhCgQteN?type=view#Slashing-and-anti-correlation-penalties) for why this is done). The idea is that `state.slashings` is a cyclically-overwriting array that stores the last 4 eeks worth of total slashings in each epoch (eg. if the current epoch is 53 and if `EPOCHS_PER_SLASHINGS_VECTOR` were equal to 10, its elements would store the total slashings in epochs `[50, 51, 52, 53, 44, 45, 46, 47, 48, 49]` respectively). Hence, if we simply take its sum, we get the total slashings in the last `EPOCHS_PER_SLASHINGS_VECTOR` epochs.
+This is the code that processes the proportional slashing penalty rule described [above](#anti-correlation). The idea is that `state.slashings` is an array where the i'th element in the array contains the total ETH balance of validators slashed in the most recent `(i % EPOCHS_PER_SLASHINGS_VECTOR)`'th epoch, where `EPOCHS_PER_SLASHINGS_VECTOR` is the number of epochs in 4 eeks. For example, if the current epoch is 53 and if `EPOCHS_PER_SLASHINGS_VECTOR` were equal to 10, its elements would store the total ETH balanced slashed in epochs `[50, 51, 52, 53, 44, 45, 46, 47, 48, 49]` respectively. If we simply take the sum of this array, we get the total slashings in the last `EPOCHS_PER_SLASHINGS_VECTOR` epochs, regardless of what position in the array is currently being updated.
 
-Note that we do this _halfway through_ the 4-eek period that is both the mandatory withdrawal delay for slashed validators and the length of the slashings vector. This means that if you get slashed, your penalty is calculated based on the portion of validator slashed in the period (2 eeks before you were slashed ... 2 eeks after you were slashed).
+Note that we calculate penalties for a slashed validator _halfway through_ the 4-eek period that is both the mandatory withdrawal delay for slashed validators and the length of the slashings vector. This means that if you get slashed, your penalty is calculated based on the portion of validator slashed in the period (2 eeks before you were slashed ... 2 eeks after you were slashed). This is done because either of the alternatives (using the [4 eeks before..... time slashed] or [time slashed... 4 eeks after] timespans) run into the problem that even if very many validators were slashed around the same time, either the first or the last validators to be slashed would incur very small penalties.
 
 #### Final updates
 
