@@ -127,6 +127,7 @@ In addition to this work, I highly recommend Ben Edgington's [annotated spec](ht
       - [`get_attestation_deltas`](#get_attestation_deltas)
       - [`process_rewards_and_penalties`](#process_rewards_and_penalties)
     - [Registry updates](#registry-updates)
+    - [`[Aside: anti-correlation penalties in Eth2]`](#aside-anti-correlation-penalties-in-eth2)
     - [Slashings](#slashings)
     - [Final updates](#final-updates)
   - [Block processing](#block-processing)
