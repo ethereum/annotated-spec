@@ -43,7 +43,7 @@ In addition to this work, I highly recommend Ben Edgington's [annotated spec](ht
     - [`DepositMessage`](#depositmessage)
     - [`DepositData`](#depositdata)
     - [`BeaconBlockHeader`](#beaconblockheader)
-    - [[Aside: domain separation]](#aside-domain-separation)
+    - [`[Aside: domain separation]`](#aside-domain-separation)
     - [`SigningData`](#signingdata)
   - [Beacon operations](#beacon-operations)
     - [`ProposerSlashing`](#proposerslashing)
@@ -763,7 +763,7 @@ The block header of a beacon chain block: contains the slot, the proposer index,
 
 <a id="domain_separation" />
 
-#### [Aside: domain separation]
+#### `[Aside: domain separation]`
 
 Domain separation in eth2 is done to prevent situations where a signature of an object of one type and context is accidentally a valid signature of an object in a different type or in a different context. This could happen because the same data happens to be valid as multiple data types; such situations could conceivably be triggered by attackers to cause slashings or other problems. Domain separation unambiguously makes this impossible.
 
