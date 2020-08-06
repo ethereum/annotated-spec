@@ -4,6 +4,142 @@
 
 In addition to this work, I highly recommend Ben Edgington's [annotated spec](https://benjaminion.xyz/eth2-annotated-spec/). This spec is more focused on design rationale issues; reading both is worthwhile for a better understanding of the eth2 protocol.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Introduction](#introduction)
+  - [What are proof of stake and sharding and why do they matter?](#what-are-proof-of-stake-and-sharding-and-why-do-they-matter)
+  - [How does eth2 sharding work?](#how-does-eth2-sharding-work)
+  - [How does eth2 proof of stake work?](#how-does-eth2-proof-of-stake-work)
+  - [Phases](#phases)
+- [Organization and type system](#organization-and-type-system)
+- [Custom types](#custom-types)
+- [Constants](#constants)
+- [Configuration](#configuration)
+  - [Misc](#misc)
+  - [Gwei values](#gwei-values)
+  - [Initial values](#initial-values)
+  - [Time parameters](#time-parameters)
+    - [`[Aside: RANDAO, seeds and committee generation]`](#aside-randao-seeds-and-committee-generation)
+  - [State list lengths](#state-list-lengths)
+  - [Rewards and penalties](#rewards-and-penalties)
+  - [Max operations per block](#max-operations-per-block)
+  - [Domain types](#domain-types)
+- [Containers](#containers)
+  - [Misc dependencies](#misc-dependencies)
+    - [`Fork`](#fork)
+    - [`ForkData`](#forkdata)
+    - [`Checkpoint`](#checkpoint)
+    - [`Validator`](#validator)
+    - [`AttestationData`](#attestationdata)
+    - [`IndexedAttestation`](#indexedattestation)
+    - [`PendingAttestation`](#pendingattestation)
+    - [`Eth1Data`](#eth1data)
+    - [`HistoricalBatch`](#historicalbatch)
+    - [`[Aside: note on the deposit process]`](#aside-note-on-the-deposit-process)
+    - [`DepositMessage`](#depositmessage)
+    - [`DepositData`](#depositdata)
+    - [`BeaconBlockHeader`](#beaconblockheader)
+    - [[Aside: domain separation]](#aside-domain-separation)
+    - [`SigningData`](#signingdata)
+  - [Beacon operations](#beacon-operations)
+    - [`ProposerSlashing`](#proposerslashing)
+    - [`AttesterSlashing`](#attesterslashing)
+    - [`Attestation`](#attestation)
+    - [`Deposit`](#deposit)
+    - [`VoluntaryExit`](#voluntaryexit)
+  - [Beacon blocks](#beacon-blocks)
+    - [`BeaconBlockBody`](#beaconblockbody)
+    - [`BeaconBlock`](#beaconblock)
+  - [Beacon state](#beacon-state)
+    - [`BeaconState`](#beaconstate)
+  - [Signed envelopes](#signed-envelopes)
+    - [`SignedVoluntaryExit`](#signedvoluntaryexit)
+    - [`SignedBeaconBlock`](#signedbeaconblock)
+    - [`SignedBeaconBlockHeader`](#signedbeaconblockheader)
+- [Helper functions](#helper-functions)
+  - [Math](#math)
+    - [`integer_squareroot`](#integer_squareroot)
+    - [`xor`](#xor)
+    - [`uint_to_bytes`](#uint_to_bytes)
+    - [`bytes_to_uint64`](#bytes_to_uint64)
+  - [Crypto](#crypto)
+    - [`hash`](#hash)
+    - [`hash_tree_root`](#hash_tree_root)
+    - [BLS Signatures](#bls-signatures)
+  - [Predicates](#predicates)
+    - [`[Aside: note on a validator's life cycle]`](#aside-note-on-a-validators-life-cycle)
+    - [`is_active_validator`](#is_active_validator)
+    - [`is_eligible_for_activation_queue`](#is_eligible_for_activation_queue)
+    - [`is_eligible_for_activation`](#is_eligible_for_activation)
+    - [`is_slashable_validator`](#is_slashable_validator)
+    - [`is_slashable_attestation_data`](#is_slashable_attestation_data)
+    - [`is_valid_indexed_attestation`](#is_valid_indexed_attestation)
+    - [`is_valid_merkle_branch`](#is_valid_merkle_branch)
+  - [Misc](#misc-1)
+    - [`compute_shuffled_index`](#compute_shuffled_index)
+    - [`compute_proposer_index`](#compute_proposer_index)
+    - [`compute_committee`](#compute_committee)
+    - [`compute_epoch_at_slot`](#compute_epoch_at_slot)
+    - [`compute_start_slot_at_epoch`](#compute_start_slot_at_epoch)
+    - [`compute_activation_exit_epoch`](#compute_activation_exit_epoch)
+    - [`compute_fork_data_root`](#compute_fork_data_root)
+    - [`compute_fork_digest`](#compute_fork_digest)
+    - [`compute_domain`](#compute_domain)
+    - [`compute_signing_root`](#compute_signing_root)
+  - [Beacon state accessors](#beacon-state-accessors)
+    - [`get_current_epoch`](#get_current_epoch)
+    - [`get_previous_epoch`](#get_previous_epoch)
+    - [`get_block_root`](#get_block_root)
+    - [`get_block_root_at_slot`](#get_block_root_at_slot)
+    - [`get_randao_mix`](#get_randao_mix)
+    - [`get_active_validator_indices`](#get_active_validator_indices)
+    - [`get_validator_churn_limit`](#get_validator_churn_limit)
+    - [`get_seed`](#get_seed)
+    - [`get_committee_count_per_slot`](#get_committee_count_per_slot)
+    - [`get_beacon_committee`](#get_beacon_committee)
+    - [`get_beacon_proposer_index`](#get_beacon_proposer_index)
+    - [`get_total_balance`](#get_total_balance)
+    - [`get_total_active_balance`](#get_total_active_balance)
+    - [`get_domain`](#get_domain)
+    - [`get_indexed_attestation`](#get_indexed_attestation)
+    - [`get_attesting_indices`](#get_attesting_indices)
+  - [Beacon state mutators](#beacon-state-mutators)
+    - [`increase_balance`](#increase_balance)
+    - [`decrease_balance`](#decrease_balance)
+    - [`initiate_validator_exit`](#initiate_validator_exit)
+    - [`slash_validator`](#slash_validator)
+- [Genesis](#genesis)
+  - [Initialize beacon state from Eth1](#initialize-beacon-state-from-eth1)
+  - [Genesis state](#genesis-state)
+  - [Genesis block](#genesis-block)
+- [Beacon chain state transition function](#beacon-chain-state-transition-function)
+  - [State transition](#state-transition)
+  - [Epoch processing](#epoch-processing)
+    - [Helper functions](#helper-functions-1)
+    - [Justification and finalization](#justification-and-finalization)
+    - [Rewards and penalties](#rewards-and-penalties-1)
+      - [Helpers](#helpers)
+      - [Components of attestation deltas](#components-of-attestation-deltas)
+      - [`get_attestation_deltas`](#get_attestation_deltas)
+      - [`process_rewards_and_penalties`](#process_rewards_and_penalties)
+    - [Registry updates](#registry-updates)
+    - [Slashings](#slashings)
+    - [Final updates](#final-updates)
+  - [Block processing](#block-processing)
+    - [Block header](#block-header)
+    - [RANDAO](#randao)
+    - [Eth1 data](#eth1-data)
+    - [Operations](#operations)
+      - [Proposer slashings](#proposer-slashings)
+      - [Attester slashings](#attester-slashings)
+      - [Attestations](#attestations)
+      - [Deposits](#deposits)
+      - [Voluntary exits](#voluntary-exits)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Introduction
 
 Ethereum 2.0 (aka eth2, aka Serenity) is the next major version of the Ethereum protocol, and is the culmination into [years](https://blog.ethereum.org/2014/10/21/scalability-part-2-hypercubes/) [of](https://github.com/vbuterin/scalability_paper/blob/master/scalability.pdf) [research](https://cdn.hackaday.io/files/10879465447136/Mauve%20Paper%20Vitalik.pdf) into [proof](https://blog.ethereum.org/2014/01/15/slasher-a-punitive-proof-of-stake-algorithm/) [of](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/) [stake](https://medium.com/@VitalikButerin/minimal-slashing-conditions-20f0b500fc6c) and [sharding](https://ethresear.ch/t/a-proposal-for-structuring-committees-cross-links-etc/2118). The eth2 protocol is a full redesign of the consensus-critical parts of the Ethereum system, with a change of the consensus from proof of work to [proof of stake](https://eth.wiki/en/concepts/proof-of-stake-faqs) and the introduction of [sharding](https://eth.wiki/sharding/Sharding-FAQs) being the two most critical changes. As of the time of this writing, eth2 leaves the application-layer parts maximally untouched; that is, transactions and smart contracts would continue to work the same way that they did before, so applications would not have to change (except to compensate for a few gas cost changes) to be eth2 compatible. However, the engine that ensures that the network comes to consensus on the transactions is radically changed.
@@ -811,8 +947,6 @@ class SignedBeaconBlockHeader(Container):
     signature: BLSSignature
 ```
 
-# Vitalik's Annotated Ethereum 2.0 Spec, Part 2
-
 ## Helper functions
 
 This first set of functions is made up of relatively simple "helper" functions that are then used in the rest of the spec.
@@ -1548,7 +1682,7 @@ Slashes a validator (ie. forcibly exits and penalizes the validator if they did 
 
 The main function defined here, `initialize_beacon_state_from_eth1`, takes an eth1 block hash and timestamp and a list of deposits, and generates an eth2 genesis state. All clients will run this function to compute the genesis state when the chain launches for the first time.
 
-### .
+### Initialize beacon state from Eth1
 
 Before the Ethereum 2.0 genesis has been triggered, and for every Ethereum 1.0 block, let `candidate_state = initialize_beacon_state_from_eth1(eth1_block_hash, eth1_timestamp, deposits)` where:
 
@@ -1626,7 +1760,7 @@ Here, we finally get to defining the main function in the spec, which defines ho
 
 We start off with a high-level definition, that breaks it up into two parts: (i) a per-slot state transition (`process_slots`) that takes place in each slot regardless of whether or not there was a block there, and (ii) a per-block state transition that takes the block as input. For example, if a block has slot 66 and its parent has slot 62, then the `process_slot` function would be called four all four slots in between (and `process_slot` would in turn call the epoch-boundary processing function `process_epoch`, because slot 64 is an epoch boundary, between epoch 1 [slots 32...63] and epoch 2 [slots 64...95]).
 
-### .
+### State transition
 
 The post-state corresponding to a pre-state `state` and a signed block `signed_block` is defined as `state_transition(state, signed_block)`. State transitions that trigger an unhandled exception (e.g. a failed `assert` or an out-of-range list access) are considered invalid. State transitions that cause a `uint64` overflow or underflow are also considered invalid.
 
