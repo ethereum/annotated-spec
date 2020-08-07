@@ -2521,3 +2521,5 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
 ```
 
 Validators can voluntarily sign a message that can be included on chain to exit the validator set. Note that there is a minimum active period of ~1 day before a validator can exit; this prevents validators from repeatedly depositing and withdrawing to try to get onto a particular shard committee, as well as polluting the deposit/withdraw queue in general.
+
+The minimum epoch rule (`assert get_current_epoch(state) >= voluntary_exit.epoch`) is introduced to ensure that an attacker building a hidden attack chain cannot replay exits on that attack chain at an earlier point in history and use this to help avoid inactivity leaks or more quickly reach finality.
