@@ -293,7 +293,7 @@ For a committee to be secure, the chance that 2/3 of it get corrupted in any giv
 >>> def probge(n, k, p): return sum([prob(n, i, p) for i in range(k, n+1)])
 ```
 
-Calling `probge(128, 86, 1/3)` (86 is the smallest integer above 128 * 2/3) returns `5.55 * 10**-15` (ie. 5.55 in a quadrillion). This is an extremely low probability, with comfortable bounds to take into account the possibility an attacker will "grind" many random seeds to try to get a favorable committee (though this is extremely difficult with RANDAO and especially VDFs). If the committee size were 64, it would no longer sufficiently secure. Increasing it to 256 would add needless inefficiency.
+Calling `probge(128, 86, 1/3)` (86 is the smallest integer above 128 * 2/3) returns `5.55 * 10**-15` (ie. 5.55 in a quadrillion). This is an extremely low probability, with comfortable bounds to take into account the possibility an attacker will "grind" many random seeds to try to get a favorable committee (though this is extremely difficult with RANDAO and especially VDFs). If the committee size were instead 64, this probability would be much higher, and so committees would no longer sufficiently secure with an attacker with 1/3 of total stake. Increasing the committee size to 256, on the other hand, would be superfluous and only add needless inefficiency.
 
 | `MAX_VALIDATORS_PER_COMMITTEE` | `uint64(2**11)` (= 2,048) |
 | - | - |
