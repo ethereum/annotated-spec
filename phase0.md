@@ -145,7 +145,7 @@ In addition to this work, I highly recommend Ben Edgington's [annotated spec](ht
 
 ## Introduction
 
-Ethereum 2.0 (aka eth2, aka Serenity) is the next major version of the Ethereum protocol, and is the culmination into [years](https://blog.ethereum.org/2014/10/21/scalability-part-2-hypercubes/) [of](https://github.com/vbuterin/scalability_paper/blob/master/scalability.pdf) [research](https://cdn.hackaday.io/files/10879465447136/Mauve%20Paper%20Vitalik.pdf) into [proof](https://blog.ethereum.org/2014/01/15/slasher-a-punitive-proof-of-stake-algorithm/) [of](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/) [stake](https://medium.com/@VitalikButerin/minimal-slashing-conditions-20f0b500fc6c) and [sharding](https://ethresear.ch/t/a-proposal-for-structuring-committees-cross-links-etc/2118). The eth2 protocol is a full redesign of the consensus-critical parts of the Ethereum system, with a change of the consensus from proof of work to [proof of stake](https://eth.wiki/en/concepts/proof-of-stake-faqs) and the introduction of [sharding](https://eth.wiki/sharding/Sharding-FAQs) being the two most critical changes. As of the time of this writing, eth2 leaves the application-layer parts maximally untouched; that is, transactions and smart contracts would continue to work the same way that they did before, so applications would not have to change (except to compensate for a few gas cost changes) to be eth2 compatible. However, the engine that ensures that the network comes to consensus on the transactions is radically changed.
+Ethereum 2.0 (aka eth2, aka Serenity) is the next major version of the Ethereum protocol, and is the culmination into [years](https://blog.ethereum.org/2014/10/21/scalability-part-2-hypercubes/) [of](https://github.com/vbuterin/scalability_paper/blob/master/scalability.pdf) [research](https://cdn.hackaday.io/files/10879465447136/Mauve%20Paper%20Vitalik.pdf) into [proof](https://blog.ethereum.org/2014/01/15/slasher-a-punitive-proof-of-stake-algorithm/) [of](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/) [stake](https://medium.com/@VitalikButerin/minimal-slashing-conditions-20f0b500fc6c) and [sharding](https://ethresear.ch/t/a-proposal-for-structuring-committees-cross-links-etc/2118). The eth2 protocol is a full redesign of the consensus-critical parts of the Ethereum system: a change of the consensus from proof of work to [proof of stake](https://eth.wiki/en/concepts/proof-of-stake-faqs) and the introduction of [sharding](https://eth.wiki/sharding/Sharding-FAQs) are the two most critical changes. As of the time of this writing, eth2 leaves the application-layer parts maximally untouched; that is, transactions and smart contracts continue to work the same way they did before, so applications do not have to change (except to compensate for a few gas cost changes) to be eth2 compatible. However, the engine that ensures that the network comes to consensus on the transactions is radically changed.
 
 ### What are proof of stake and sharding and why do they matter?
 
@@ -156,21 +156,25 @@ For long answers, see:
 
 But in short:
 
-* **Proof of stake** is a more efficient consensus mechanism that avoids the need to consume extremely large amounts of electricity and hardware costs to maintain the network by using coins, rather than computing hardware, as the economic basis for the consensus
-* **Sharding** is a scalability technique that involves splitting up verification so that each node in the network only needs to verify a small portion of the transactions in the network, instead of verifying every transaction
+* **Proof of stake** is a more efficient consensus mechanism that avoids the need to consume extremely large amounts of electricity and hardware costs to maintain the network -- it achieves this by using coins, rather than computing hardware, as the economic basis for the consensus
+* **Sharding** is a scalability technique that involves splitting up verification so that each node only needs to verify a small portion of the transactions in the network, instead of verifying every transaction
 
 ### How does eth2 sharding work?
 
-In the current (eth1) architecture, the blockchain is simply a chain of blocks, with each block pointing to the previous block. Each block also contains transactions, and the history is just all of these transactions, in the order in which they appear in the chain.
+In the current (eth1) architecture, the blockchain is simply a chain of blocks, with each block pointing to the previous block. Each block contains transactions, and the history is just all of these transactions, in the order in which they appear in the chain.
 
 ![](https://i.stack.imgur.com/ukuq0.png)
 
-In eth2, we instead have a **beacon chain** and N (currently 64) **shard chains**. The beacon chain is a central chain which everyone stores, downloads and verifies, and which functions roughly like an eth1 chain (except using proof of stake instead of proof of work). The beacon chain contains two kinds of information:
+The eth2 architecture is slightly more involved, instead of having one chain of blocks, we have a **beacon chain** *and* N (currently 64) **shard chains**.
+
+The beacon chain is a central chain which everyone stores, downloads and verifies, and which functions roughly like an eth1 chain (except using proof of stake instead of proof of work). The beacon chain contains two kinds of information:
 
 * Consensus-critical information (eg. who the current proof of stake validators are, what rewards and penalties have been assigned to them, deposits and withdrawals...)
 * Pointers (ie. hashes) to shard chain blocks and shard state
 
-Each block in each shard chain is only fully downloaded and verified by a small portion of nodes, and it's the shard chains that contain all of the user-level transactions (except proof of stake-related functions). Users can choose which shard they publish transactions or contracts to. It is possible to move coins or contracts between shards, but only asynchronously (meaning, with a delay of 1 slot). The shard chains and the beacon chain are tightly coupled with each other, connected through hash-linking and crosslinks:
+The shard chains contain all of the user-level transactions (except proof of stake-related functions). Each block in each shard is only fully downloaded and verified by a small portion of nodes. Users can choose which shard they publish transactions or contracts to. It is possible to move coins or contracts between shards, but only asynchronously (meaning, with a small delay of 1 slot).
+
+The shard chains and the beacon chain are tightly coupled with each other, connected through hash-linking and crosslinks:
 
 ![](https://storage.googleapis.com/ethereum-hackmd/upload_3f4bade5829953a6bc0cfabbc7347673.png)
 
@@ -195,7 +199,7 @@ The chain comes to consensus as a result of these attestations. Roughly speaking
 
 If a validator correctly makes attestations, they get rewarded. If a validator misses their slot, or makes an incorrect attestation, they get penalized. If a validator unambiguously contradicts themselves (eg. voting for two conflicting blocks in the same epoch), they get **slashed**. A slashed validator (i) suffers a penalty of 3-100% of their deposit, (ii) is forcibly ejected from the validator set, and (iii) has their coins forcibly locked for an additional 4 eeks before they can withdraw. In general, as long as you are running correct validator software, this will not happen to you, and as long as you stay online more than ~55-70% of the time, validating will be profitable.
 
-A validator can voluntarily initiate an **exit** at any time, though there is a limit on how many can exit per epoch, and if too many validators try to exit at the same time they will be put into a queue, and will remain active until they get to the front of the queue. After a validator successfully exits, after 1/8 of an eek they will be able to withdraw (though this functionality will only be turned on after ["the merge"](https://ethresear.ch/t/the-eth1-eth2-transition/6265) of eth1 and eth2).
+A validator can voluntarily initiate an **exit** at any time, though there is a limit on how many can exit per epoch; if too many validators try to exit at the same time they will be put into a queue, and will remain active until they get to the front of the queue. After a validator successfully exits, after 1/8 of an eek they will be able to withdraw (though this functionality will only be turned on after ["the merge"](https://ethresear.ch/t/the-eth1-eth2-transition/6265) of eth1 and eth2).
 
 ### Phases
 
@@ -205,7 +209,7 @@ To reduce risks, the eth2 deployment process is split into phases:
 * **Phase 1**: shard chains are activated, though they only process data, not transactions. Hence, the eth2 chain becomes useful as a data availability verification layer for rollups, but you cannot yet directly transact on it.
 * **Phase 1.5 (aka The Merge)**: the eth1 chain is shut down, and the state (ie. all balances, contracts, code, storage...) from the eth1 chain is moved into one shard of the eth2 chain. Users can transact on that shard.
 * **Phase 2**: all shards support full transaction capabilities.
-* **Phase 3+ (aka Ethereum 2.x)**: ongoing improvements to safety, efficiency and scalability, though the "basic structure" of the eth2 chain may well be never again changed.
+* **Phase 3+ (aka Ethereum 2.x)**: ongoing improvements to safety, efficiency and scalability, though the "basic structure" of the eth2 chain may well never again be changed.
 
 See also [the roadmap](https://media.consensys.net/an-annotated-version-of-vitalik-buterins-ethereum-roadmap-5876498d4f3a):
 
