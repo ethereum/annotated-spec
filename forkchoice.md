@@ -75,7 +75,11 @@ Now, let's go through the specification...
 
 ## Fork choice
 
-The head block root associated with a `store` is defined as `get_head(store)`. At genesis, let `store = get_forkchoice_store(genesis_state)` and update `store` by running:
+One important thing to note is that the fork choice _is not a pure function_; that is, what you accept as a canonical chain does not depend just on what data you also have, but also when you received it. The main reason this is done is to enforce finality: if you accept a block as finalized, then you will never revert it, even if you later see a conflicting block as finalized. Such a situation would only happen in cases where there is an active >1/3 attack on the chain; in such cases, we expect extra-protocol measures to be required to get all clients back on the same chain. There are also other deviations from purity, particularly a "sticky" choice of latest justified checkpoint, where the latest justified checkpoint can only change near the beginning of an epoch; this is done to prevent certain kinds of "bouncing attacks".
+
+We implement this fork choice by defining a `store` that contains received fork-choice-relevant information, as well as some "memory variables", and a function `get_head(store)`.
+
+At genesis, let `store = get_forkchoice_store(genesis_state)` and update `store` by running:
 
 - `on_tick(store, time)` whenever `time > store.time` where `time` is the current Unix time
 - `on_block(store, block)` whenever a block `block: SignedBeaconBlock` is received
@@ -97,7 +101,11 @@ Any of the above handlers that trigger an unhandled exception (e.g. a failed ass
 | - | - | :-: | :-: |
 | `SAFE_SLOTS_TO_UPDATE_JUSTIFIED` | `2**3` (= 8) | slots | 96 seconds |
 
+The justified checkpoint can only be changed in the first 8 slots of an epoch; see below for reasoning why this is done.
+
 ### Helpers
+
+Here, we define the data structure for the `store`. It only has one new subtype, the `LatestMessage` (the vote in the latest [meaning highest-epoch] valid attestation received from a validator).
 
 #### `LatestMessage`
 
@@ -126,8 +134,7 @@ class Store(object):
 
 #### `get_forkchoice_store`
 
-The provided anchor-state will be regarded as a trusted state, to not roll back beyond.
-This should be the genesis state for a full client.
+This function initializes the `store` given a particular block that the fork choice would start from. This should be the most recent finalized block that the client knows about from extra-protocol sources; at the beginning, it would just be the genesis.
 
 *Note* With regards to fork choice, block headers are interchangeable with blocks. The spec is likely to move to headers for reduced overhead in test vectors and better encapsulation. Full implementations store blocks as part of their database and will often use full blocks when dealing with production fork choice.
 
@@ -175,6 +182,8 @@ def compute_slots_since_epoch_start(slot: Slot) -> int:
     return slot - compute_start_slot_at_epoch(compute_epoch_at_slot(slot))
 ```
 
+Compute which slot of the current epoch we are in (returns 0...31).
+
 #### `get_ancestor`
 
 ```python
@@ -189,6 +198,8 @@ def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
         return root
 ```
 
+Get the ancestor of block `root` (we refer to all blocks by their root in the fork choice spec) at the given `slot` (eg. if `root` was at slot 105 and `slot = 100`, and the chain has no skipped slots in between, it would return the block's fifth ancestor).
+
 #### `get_latest_attesting_balance`
 
 ```python
@@ -202,7 +213,19 @@ def get_latest_attesting_balance(store: Store, root: Root) -> Gwei:
     ))
 ```
 
+Get the total ETH attesting to a given block or its descendants, considering only latest attestations and active validators. This is the main function that is used to choose between two children of a block in LMD GHOST. Recall the diagram from above:
+
+![](https://vitalik.ca/files/posts_files/cbc-casper-files/Chain7.png)
+
+In this diagram, we assume that each of the last five block proposals (the blue ones) carries one attestation, which specifies that block as the head, and we assume each block is created by a different validator, and all validators have the same deposit size. The number in each square represents the latest attesting balance of that block. In eth2, blocks and attestations are separate, and there will be hundreds of attestations supporting each block, but otherwise the principle is the same.
+
 #### `filter_block_tree`
+
+Here, we implement an important but subtle deviation from the "LMD GHOST starting from the last justified block" rule mentioned above
+
+[To be completed]
+
+See [section 4.6 of the Gasper paper](https://arxiv.org/pdf/2003.03052.pdf) for more details.
 
 ```python
 def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconBlock]) -> bool:
