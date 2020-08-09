@@ -163,7 +163,7 @@ But in short:
 
 In the current (eth1) architecture, the blockchain is simply a chain of blocks, with each block pointing to the previous block. Each block contains transactions, and the history is just all of these transactions, in the order in which they appear in the chain.
 
-![](https://i.stack.imgur.com/ukuq0.png)
+![](../images/pow_chain.png)
 
 The eth2 architecture is slightly more involved, instead of having one chain of blocks, we have a **beacon chain** *and* N (currently 64) **shard chains**.
 
@@ -176,7 +176,7 @@ The shard chains contain all of the user-level transactions (except proof of sta
 
 The shard chains and the beacon chain are tightly coupled with each other, connected through hash-linking and crosslinks:
 
-![](https://storage.googleapis.com/ethereum-hackmd/upload_3f4bade5829953a6bc0cfabbc7347673.png)
+![](../images/shardchains.png)
 
 For a shard block to be considered part of the "canonical history" it must be (i) valid and (ii) referenced in the beacon chain via a **crosslink**. A crosslink is a set of signatures of a shard block, signed by a randomly selected **committee** of ~128 **validators** (consensus-participating PoS nodes) which attests to the shard block's validity.
 
@@ -213,7 +213,7 @@ To reduce risks, the eth2 deployment process is split into phases:
 
 See also [the roadmap](https://media.consensys.net/an-annotated-version-of-vitalik-buterins-ethereum-roadmap-5876498d4f3a):
 
-![](https://storage.googleapis.com/ethereum-hackmd/upload_fae4498237fede550e6022528fd0f00e.jpeg)
+![](../images/roadmap.jpeg)
 
 ## Organization and type system
 
@@ -403,7 +403,7 @@ When the deposit count becomes sufficient for the eth2 chain to start, the start
 
 A tradeoff between blockchain speed and risk. Note that in future phases, multiple steps will have to happen within a slot: beacon block -> shard block -> beacon block, as well as eventually a round of data availability sampling, so it is good to be conservative.
 
-![](https://storage.googleapis.com/ethereum-hackmd/upload_a2c119d0ba9d384203bcb079e33bfcd6.png)
+![](../images/singleslot.png)
 
 Eth1 latency is generally ~1 second; 12 seconds gives a healthy safety margin on top of this.
 
@@ -441,7 +441,7 @@ To fully prevent this type of manipulation, we use a mechanism where the validat
 
 We update the seed (or rather, the **randao mix**, which is used to generate the seed) every block using a mechanism inspired by [RANDAO](https://github.com/randao/randao): the proposer of a block provides a hash that gets mixed into (ie. XOR'd into) the seed; this hash is unknown to the public ahead of time, but it is pre-committed, in the sense that there is only one valid hash that the proposer could submit. This is done with by BLS-signing the current epoch; the BLS signature scheme has the property that for any given key there is exactly one valid signature for any given message (as opposed to eg. ECDSA where there are many possible valid signatures that can be made with the same key for the same message).
 
-![](https://storage.googleapis.com/ethereum-hackmd/upload_86d4ccefc8be1d92e2f0fb7be5efac80.png)
+![](../images/randomness.png)
 
 The randao mix at the start of epoch N is used to compute the seed for epoch N+1; this ensures that the proposer and committee roles are known one epoch ahead of time, giving validators a chance to prepare.
 
@@ -541,7 +541,7 @@ Note that when the total leaked becomes a substantial fraction of deposit size, 
 
 An alternative nearly-equivalent approximation of the remaining balance is `e ** -(epochs**2/(2*INACTIVITY_PENALTY_QUOTIENT))`, where `e ~= 2.71828`. This implies that after `2**12` epochs (2 eeks), the portion of your original balance remaining is `e**(-1/2)`, or roughly 60.6% of your original balance.
 
-![](https://storage.googleapis.com/ethereum-hackmd/upload_54c8f64d00ade395640ad667ae1ccf40.png)
+![](../images/inactivityleak.png)
 
 
 | `MIN_SLASHING_PENALTY_QUOTIENT` | `uint64(2**5)` (= 32) |
