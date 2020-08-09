@@ -38,7 +38,7 @@
 
 ## Introduction
 
-This document is the beacon chain **fork choice rule** specification, part of Ethereum 2.0 Phase 0. It describes the mechanism for how to choose what is the "canonical" chain in the event that there are multiple competing chains that disagree with each other. All blockchains have the possibility of temporary disagreement, either because of malicious behavior (eg. a block proposer publishing two different blocks at the same time), or just network latency (eg. a block being delayed by a few seconds, causing it to be broadcasted around the same time as the _next_ block that gets published by someone else). In such cases, some mechanism is needed to choose which of the two (or more) chains represents the "actual" history and state of the system (this chain is called the **canonical chain**).
+This document is the beacon chain **fork choice rule** specification, part of Ethereum 2.0 Phase 0. It describes the mechanism for how to choose what is the "canonical" chain in the event that there are multiple conflicting versions of the chain to choose from. All blockchains have the possibility of temporary disagreement, either because of malicious behavior (eg. a block proposer publishing two different blocks at the same time), or just network latency (eg. a block being delayed by a few seconds, causing it to be broadcasted around the same time as the _next_ block that gets published by someone else). In such cases, some mechanism is needed to choose which of the two (or more) chains represents the "actual" history and state of the system (this chain is called the **canonical chain**).
 
 PoW chains (Bitcoin, Ethereum 1.0, etc) typically use some variant of the **longest chain rule**: if there is a disagreement between chains, pick the chain that is the longest.
 
@@ -59,23 +59,45 @@ Eth2 combines together the advantages of both. It includes a traditional-BFT-ins
 
 The core idea of LMD GHOST is that at each fork, instead of choosing the side that contains a longer chain, we choose the side that has more total support from validators, counting only the most recent message of each validator as support. This is heavily inspired by [Zohar and Sompolinsky's original GHOST paper](https://eprint.iacr.org/2013/881), but it adapts the design from its original PoW context to our new PoS context. LMD GHOST is powerful because it easily generalizes to much more than one "vote" being sent in parallel.
 
-This is a very valuable feature for us, because Casper FFG already requires every validator to send one message per epoch, meaning that hundreds of messages are already being sent every second. We piggyback on those messages and ask them to include additional information voting on the current head of the chain. The result of this is that when a block is published, within seconds there are hundreds of signed messages from validators (**attestations**) confirming the block, and after even one slot (12 seconds) it's very difficult to revert a block. Anyone seeking even stronger ironclad confirmation can simply wait for finality after two epochs.
+This is a very valuable feature for us, because Casper FFG [already requires every validator](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#how-does-eth2-proof-of-stake-work) to send one attestation per epoch, meaning that hundreds of attestations are already being sent every second. We piggyback on those messages and ask them to include additional information voting on the current head of the chain. The result of this is that when a block is published, within seconds there are hundreds of signed messages from validators (**attestations**) confirming the block, and after even one slot (12 seconds) it's very difficult to revert a block. Anyone seeking even stronger ironclad confirmation can simply wait for finality after two epochs (~12 minutes).
 
 The approximate approach that we take to combining Casper FFG and LMD GHOST is:
 
-1. Use the Casper FFG rules to compute finalized blocks. If a block finalizes, all future canonical chains must pass through this block.
-2. Use the Casper FFG rules to keep track of the **latest justified block** (LJB) that is a descendant of the latest accepted finalized block.
-3. Use the LMD GHOST rules, starting from the LJB as a root, to compute the chain head.
+1. Use the Casper FFG rules to compute finalized blocks. If a block becomes finalized, all future canonical chains must pass through this block.
+2. Use the Casper FFG rules to keep track of the **latest justified checkpoint** (LJC) that is a descendant of the latest accepted finalized checkpoint.
+3. Use the LMD GHOST rules, starting from the LJC as a root, to compute the chain head.
 
-This combination, particularly rule (2), is implemented to ensure that new blocks that validators create by following the rules actually will continually finalize new blocks with Casper FFG, even if temporary exceptional situations (eg. involving attacks or extremely high network latency) take place.
+This combination of steps, particularly rule (2), is implemented to ensure that new blocks that validators create by following the rules actually will continually finalize new blocks with Casper FFG, even if temporary exceptional situations (eg. involving attacks or extremely high network latency) take place.
 
-Note also that Casper FFG only deals with **checkpoints**, or blocks right before the boundary of an epoch. There is thus a **checkpoint tree** that can be viewed as a [graph minor](https://en.wikipedia.org/wiki/Graph_minor) of the block tree, where checkpoint C1 is a parent of checkpoint C2 if block C1 is the ancestor of C2 in the block tree that is at the end of the epoch before the epoch of C2. Note that for convenience, we think about (block, slot) pairs, not blocks; the difference is that if the chain skips a slot because some block proposer is offline, the (block, slot) tree still includes a distinct member for each slot in between two blocks, making it easier to reason about the data structure.
+### Checkpoints vs blocks
+
+Note also that Casper FFG deals with **checkpoints** and the **checkpoint tree**, whereas LMD GHOST deals with blocks and the **block tree**. One simple way to think about this is that the checkpoint tree is a compressed version of the block tree, where we only consider blocks at the start of an epoch, and where checkpoint A is a parent of checkpoint B if block A is the ancestor of B in the block tree that begins the epoch before B:
+
+![](./images/checkpoint_tree_1.png)
+
+_Green blocks are the checkpoints; in the checkpoint tree, A is the parent of B1 and B2._
+
+But to approach a more realistic picture we need to account for an important scenario: when there are skipped slots. If a chain has a skipped block at some slot, we take the most recent block before that slot in that chain as the epoch boundary block:
+
+![](./images/checkpoint_tree_2.png)
+
+In any case where there is divergence between multiple chains, skipped slots will be frequent, because proposer selection and slashing rules forbid multiple blocks from being created in the same slot (unless two chains diverge for more than four epochs)! Note also that if we want to compute the _post-state_ of a checkpoint, we would have to run [the `process_slots` function](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#state-transition) up to the first slot of the epoch to process the empty slots.
+
+Another important edge case is when there is more than an entire epoch of skipped slots. To cover this edge case, we think about a checkpoint as a (block, slot) pair, not a blocks; this means that the same block could be part of multiple checkpoints that an attestation could validly reference:
+
+![](./images/checkpoint_tree_3.png)
+
+In this case, the block B2 corresponds to two checkpoints, `(B2, N)` and `(B2, N+1)`, one for each epoch. In general, the most helpful model for understanding Ethereum state transitions may actually be the full state transition tree, where we look at all possible `(block, slot)` pairs:
+
+![](./images/checkpoint_tree_4.png)
+
+If you're a mathematician, you could view both the block tree and the checkpoint tree as [graph minors](https://en.wikipedia.org/wiki/Graph_minor) of the state transition tree. Casper FFG works over the checkpoint tree, and LMD GHOST works over the block tree. For convenience, we'll use the phrase "**latest justified block**" (LJB) to refer to the block referenced in the latest justified checkpoint; because LMD GHOST works over the block tree we'll keep the discussion to blocks, though the actual data structures will talk about the latest justified checkpoint. Note that while one block may map to multiple checkpoints, a checkpoint only references one block, so this language is unambiguous.
 
 Now, let's go through the specification...
 
 ## Fork choice
 
-One important thing to note is that the fork choice _is not a pure function_; that is, what you accept as a canonical chain does not depend just on what data you also have, but also when you received it. The main reason this is done is to enforce finality: if you accept a block as finalized, then you will never revert it, even if you later see a conflicting block as finalized. Such a situation would only happen in cases where there is an active >1/3 attack on the chain; in such cases, we expect extra-protocol measures to be required to get all clients back on the same chain. There are also other deviations from purity, particularly a "sticky" choice of latest justified checkpoint, where the latest justified checkpoint can only change near the beginning of an epoch; this is done to prevent certain kinds of "bouncing attacks".
+One important thing to note is that the fork choice _is not a pure function_; that is, what you accept as a canonical chain does not depend just on what data you also have, but also when you received it. The main reason this is done is to enforce finality: if you accept a block as finalized, then you will never revert it, even if you later see a conflicting block as finalized. Such a situation would only happen in cases where there is an active >1/3 attack on the chain; in such cases, we expect extra-protocol measures to be required to get all clients back on the same chain. There are also other deviations from purity, particularly a "sticky" choice of latest justified block, where the latest justified block can only change near the beginning of an epoch; this is done to prevent certain kinds of "bouncing attacks".
 
 We implement this fork choice by defining a `store` that contains received fork-choice-relevant information, as well as some "memory variables", and a function `get_head(store)`.
 
@@ -235,16 +257,16 @@ In this diagram, we assume that each of the last five block proposals (the blue 
 
 #### `filter_block_tree`
 
-Here, we implement an important but subtle deviation from the "LMD GHOST starting from the last justified block" rule mentioned above. To motivate this deviation, consider the following attack:
+Here, we implement an important but subtle deviation from the "LMD GHOST starting from the latest justified block" rule mentioned above. To motivate this deviation, consider the following attack:
 
 * There exists a justified block B, with two descendants, C1 and C2
 * B is justified, but the evidence of these justifications somehow only got included in the C1 chain, not the C2 chain
-* The C1 chain starts off favored by the LMD GHOST fork choice. Suppose that 49% of validators attest to C1, using B as the last-justified-block, as the C1 chain recognizes B as justified
-* The fork choice switches to favoring C2 for some reason (eg. the other 51% of validators attested to C2 in that epoch). C2 does not recognize B as justified (and after two epochs can't recognize B as justified as it's too late to include evidence), so some earlier block A is used as the last-justified-block instead.
+* The C1 chain starts off favored by the LMD GHOST fork choice. Suppose that 49% of validators attest to C1, using B as the latest justified block, as the C1 chain recognizes B as justified
+* The fork choice switches to favoring C2 for some reason (eg. the other 51% of validators attested to C2 in that epoch). C2 does not recognize B as justified (and after two epochs can't recognize B as justified as it's too late to include evidence), so some earlier block A is used as the latest justified block instead.
 
 Now, all validators see C2 as the canonical chain, and the system is stuck: for a new block to be finalized, 67% of validators must make an attestation `[A -> C2]` (or `[A -> child(C2)]`), but only 51% can do this freely; at least 16% are constrained because they already voted `[B -> C1]`, and `[A -> C2]` violates the no-double-vote rule and `[A -> child(C2)]` violates the no-surround rule. Hence, the system can only progress if 16% voluntarily slash themselves.
 
-The fix is the following. We restrict the fork choice to only looking at descendants of B that actually recognize B as a last-justified-block (or more precisely, leaves in the block tree where B is their last-justified-block, as well as their ancestors). A client only accepts a block B locally as a last-justified-block if there is an actual descendant block that recognizes it as such, so we know there must be at least one such chain. With this fix, C2 would not even be considered a viable candidate descendant of B until it (or one of its descendants) recognizes B as justified, so the above situation would resolve by simply favoring C1.
+The fix is the following. We restrict the fork choice to only looking at descendants of B that actually recognize B as their latest justified block (or more precisely, leaves in the block tree where B is their latest justified block, as well as their ancestors). A client only accepts a block B locally as a latest justified block if there is an actual descendant block that recognizes it as such, so we know there must be at least one such chain. With this fix, C2 would not even be considered a viable candidate descendant of B until it (or one of its descendants) recognizes B as justified, so the above situation would resolve by simply favoring C1.
 
 See [section 4.6 of the Gasper paper](https://arxiv.org/pdf/2003.03052.pdf) for more details.
 
@@ -360,7 +382,7 @@ The idea here is that we want to only change the last-justified-block within the
 3. In epoch N+2, A is justified and so validators are attesting to A', a descendant of A. When A' gets to 62% support, the attacker publishes attestations worth 5% of total stake for B. Now B is justified, and favored by the fork choice.
 4. In epoch N+3, B is justified, and so validators are attesting to B', a descendant of B. When B' gets to 62% support, the attacker publishes attestations worth 5% of total stake for A'....
 
-This could continue forever, bouncing permanently between the two chains preventing any new block from being finalized. This attack can happen because the combined use of LMD GHOST and Casper FFG creates a discontinuity, where a small shift in support for a block can outweigh a large amount of support for another block, if that small shift pushes it past the 2/3 threshold needed for justification. We block the attack by only allowing the last justified block to change near the beginning of an epoch; this way, there is a full 2/3 of an epoch during which honest validators agree on the head and have the opportunity to justify a block and thereby further cement it, at the same time causing the LMD GHOST rule to strongly favor that head. This sets up that block to most likely be finalized in the next epoch.
+This could continue forever, bouncing permanently between the two chains preventing any new block from being finalized. This attack can happen because the combined use of LMD GHOST and Casper FFG creates a discontinuity, where a small shift in support for a block can outweigh a large amount of support for another block, if that small shift pushes it past the 2/3 threshold needed for justification. We block the attack by only allowing the latest justified block to change near the beginning of an epoch; this way, there is a full 2/3 of an epoch during which honest validators agree on the head and have the opportunity to justify a block and thereby further cement it, at the same time causing the LMD GHOST rule to strongly favor that head. This sets up that block to most likely be finalized in the next epoch.
 
 See [Ryuya Nakamura's ethresear.ch post](https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114) for more discussion.
 
