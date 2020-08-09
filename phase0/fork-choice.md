@@ -73,23 +73,23 @@ This combination of steps, particularly rule (2), is implemented to ensure that 
 
 Note also that Casper FFG deals with **checkpoints** and the **checkpoint tree**, whereas LMD GHOST deals with blocks and the **block tree**. One simple way to think about this is that the checkpoint tree is a compressed version of the block tree, where we only consider blocks at the start of an epoch, and where checkpoint A is a parent of checkpoint B if block A is the ancestor of B in the block tree that begins the epoch before B:
 
-![](./images/checkpoint_tree_1.png)
+![](../images/checkpoint_tree_1.png)
 
 _Green blocks are the checkpoints; in the checkpoint tree, A is the parent of B1 and B2._
 
 But to approach a more realistic picture we need to account for an important scenario: when there are skipped slots. If a chain has a skipped block at some slot, we take the most recent block before that slot in that chain as the epoch boundary block:
 
-![](./images/checkpoint_tree_2.png)
+![](../images/checkpoint_tree_2.png)
 
 In any case where there is divergence between multiple chains, skipped slots will be frequent, because proposer selection and slashing rules forbid multiple blocks from being created in the same slot (unless two chains diverge for more than four epochs)! Note also that if we want to compute the _post-state_ of a checkpoint, we would have to run [the `process_slots` function](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#state-transition) up to the first slot of the epoch to process the empty slots.
 
 Another important edge case is when there is more than an entire epoch of skipped slots. To cover this edge case, we think about a checkpoint as a (block, slot) pair, not a blocks; this means that the same block could be part of multiple checkpoints that an attestation could validly reference:
 
-![](./images/checkpoint_tree_3.png)
+![](../images/checkpoint_tree_3.png)
 
 In this case, the block B2 corresponds to two checkpoints, `(B2, N)` and `(B2, N+1)`, one for each epoch. In general, the most helpful model for understanding Ethereum state transitions may actually be the full state transition tree, where we look at all possible `(block, slot)` pairs:
 
-![](./images/checkpoint_tree_4.png)
+![](../images/checkpoint_tree_4.png)
 
 If you're a mathematician, you could view both the block tree and the checkpoint tree as [graph minors](https://en.wikipedia.org/wiki/Graph_minor) of the state transition tree. Casper FFG works over the checkpoint tree, and LMD GHOST works over the block tree. For convenience, we'll use the phrase "**latest justified block**" (LJB) to refer to the block referenced in the latest justified checkpoint; because LMD GHOST works over the block tree we'll keep the discussion to blocks, though the actual data structures will talk about the latest justified checkpoint. Note that while one block may map to multiple checkpoints, a checkpoint only references one block, so this language is unambiguous.
 
@@ -113,7 +113,7 @@ Any of the above handlers that trigger an unhandled exception (e.g. a failed ass
 
 1) **Leap seconds**: Slots will last `SECONDS_PER_SLOT + 1` or `SECONDS_PER_SLOT - 1` seconds around leap seconds. This is automatically handled by [UNIX time](https://en.wikipedia.org/wiki/Unix_time).
 2) **Honest clocks**: Honest nodes are assumed to have clocks synchronized within `SECONDS_PER_SLOT` seconds of each other.
-3) **Eth1 data**: The large `ETH1_FOLLOW_DISTANCE` specified in the [honest validator document](./validator.md) should ensure that `state.latest_eth1_data` of the canonical Ethereum 2.0 chain remains consistent with the canonical Ethereum 1.0 chain. If not, emergency manual intervention will be required.
+3) **Eth1 data**: The large `ETH1_FOLLOW_DISTANCE` specified in the [honest validator document](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/validator.md) should ensure that `state.latest_eth1_data` of the canonical Ethereum 2.0 chain remains consistent with the canonical Ethereum 1.0 chain. If not, emergency manual intervention will be required.
 4) **Manual forks**: Manual forks may arbitrarily change the fork choice rule but are expected to be enacted at epoch transitions, with the fork details reflected in `state.fork`.
 5) **Implementation**: The implementation found in this specification is constructed for ease of understanding rather than for optimization in computation, space, or any other resource. A number of optimized alternatives can be found [here](https://github.com/protolambda/lmd-ghost).
 
