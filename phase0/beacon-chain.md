@@ -159,29 +159,6 @@ But in short:
 * **Proof of stake** is a more efficient consensus mechanism that avoids the need to consume extremely large amounts of electricity and hardware costs to maintain the network -- it achieves this by using coins, rather than computing hardware, as the economic basis for the consensus
 * **Sharding** is a scalability technique that involves splitting up verification so that each node only needs to verify a small portion of the transactions in the network, instead of verifying every transaction
 
-### How does eth2 sharding work?
-
-In the current (eth1) architecture, the blockchain is simply a chain of blocks, with each block pointing to the previous block. Each block contains transactions, and the history is just all of these transactions, in the order in which they appear in the chain.
-
-![](../images/pow_chain.png)
-
-The eth2 architecture is slightly more involved, instead of having one chain of blocks, we have a **beacon chain** *and* N (currently 64) **shard chains**.
-
-The beacon chain is a central chain which everyone stores, downloads and verifies, and which functions roughly like an eth1 chain (except using proof of stake instead of proof of work). The beacon chain contains two kinds of information:
-
-* Consensus-critical information (eg. who the current proof of stake validators are, what rewards and penalties have been assigned to them, deposits and withdrawals...)
-* Pointers (ie. hashes) to shard chain blocks and shard state
-
-The shard chains contain all of the user-level transactions (except proof of stake-related functions). Each block in each shard is only fully downloaded and verified by a small portion of nodes. Users can choose which shard they publish transactions or contracts to. It is possible to move coins or contracts between shards, but only asynchronously (meaning, with a small delay of 1 slot).
-
-The shard chains and the beacon chain are tightly coupled with each other, connected through hash-linking and crosslinks:
-
-![](../images/shardchains.png)
-
-For a shard block to be considered part of the "canonical history" it must be (i) valid and (ii) referenced in the beacon chain via a **crosslink**. A crosslink is a set of signatures of a shard block, signed by a randomly selected **committee** of ~128 **validators** (consensus-participating PoS nodes) which attests to the shard block's validity.
-
-**NB: if the beacon chain ends up linking to an invalid shard block (this can only realistically happen in a 51% attack or similar extreme scenario), that beacon chain is invalid. Invalid transactions (or state transitions) by definition can never be part of the canonical history.**
-
 ### How does eth2 proof of stake work?
 
 The participants in eth2 proof of stake consensus are called **validators**. To become a validator, you need to deposit 32 ETH, either from the eth1 chain, or from a shard chain (when shard chains become enabled). Once you deposit 32 ETH, you are put into an **activation queue**, and some time later you become an **active validator**.
@@ -200,6 +177,10 @@ The chain comes to consensus as a result of these attestations. Roughly speaking
 If a validator correctly makes attestations, they get rewarded. If a validator misses their slot, or makes an incorrect attestation, they get penalized. If a validator unambiguously contradicts themselves (eg. voting for two conflicting blocks in the same epoch), they get **slashed**. A slashed validator (i) suffers a penalty of 3-100% of their deposit, (ii) is forcibly ejected from the validator set, and (iii) has their coins forcibly locked for an additional 4 eeks before they can withdraw. In general, as long as you are running correct validator software, this will not happen to you, and as long as you stay online more than ~55-70% of the time, validating will be profitable.
 
 A validator can voluntarily initiate an **exit** at any time, though there is a limit on how many can exit per epoch; if too many validators try to exit at the same time they will be put into a queue, and will remain active until they get to the front of the queue. After a validator successfully exits, after 1/8 of an eek they will be able to withdraw (though this functionality will only be turned on after ["the merge"](https://ethresear.ch/t/the-eth1-eth2-transition/6265) of eth1 and eth2).
+
+### How does eth2 sharding work
+
+See [the corresponding section in the phase 1 doc](../phase1/beacon-chain.md#how-does-eth2-sharding-work).
 
 ### Phases
 
