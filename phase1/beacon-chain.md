@@ -84,7 +84,30 @@
 
 ## Introduction
 
-This document describes the extensions made to the Phase 0 design of The Beacon Chain to facilitate the new shards as part of Phase 1 of Eth2.
+This document describes the extensions made to the Phase 0 design of The Beacon Chain to facilitate the new features that are being added in phase 1. By far the most important feature in phase 1 is **sharding**.
+
+### How does eth2 sharding work?
+
+In the current (eth1) architecture, the blockchain is simply a chain of blocks, with each block pointing to the previous block. Each block contains transactions, and the history is just all of these transactions, in the order in which they appear in the chain.
+
+![](../images/pow_chain.png)
+
+The eth2 architecture, starting from phase 1, is slightly more involved: instead of having one chain of blocks, we have a **beacon chain** *and* N (currently 64) **shard chains**.
+
+The beacon chain is a central chain which everyone stores, downloads and verifies, and which functions roughly like an eth1 chain (except using proof of stake instead of proof of work). The beacon chain contains two kinds of information:
+
+* Consensus-critical information (eg. who the current proof of stake validators are, what rewards and penalties have been assigned to them, deposits and withdrawals...)
+* Pointers (ie. hashes) to shard chain blocks and shard state
+
+The shard chains contain all of the user-level transactions (except proof of stake-related functions). Each block in each shard is only fully downloaded and verified by a small portion of nodes. Users can choose which shard they publish transactions or contracts to. It is possible to move coins or contracts between shards, but only asynchronously (meaning, with a small delay of 1 slot).
+
+The shard chains and the beacon chain are tightly coupled with each other, connected through hash-linking and crosslinks:
+
+![](../images/shardchains.png)
+
+For a shard block to be considered part of the "canonical history" it must be (i) valid and (ii) referenced in the beacon chain via a **crosslink**. A crosslink is a set of signatures of a shard block, signed by a randomly selected **committee** of ~128 **validators** (consensus-participating PoS nodes) which attests to the shard block's validity.
+
+**NB: if the beacon chain ends up linking to an invalid shard block (this can only realistically happen in a 51% attack or similar extreme scenario), that beacon chain is invalid. Invalid transactions (or state transitions) by definition can never be part of the canonical history.**
 
 ## Custom types
 
