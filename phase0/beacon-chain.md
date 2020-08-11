@@ -289,7 +289,7 @@ The maximum supported validator count is `2**22` (=4,194,304), or ~134 million E
 
 | `MIN_PER_EPOCH_CHURN_LIMIT` | `uint64(2**2)` (= 4)|
 | - | - |
-|`CHURN_LIMIT_QUOTIENT` | `uint64(2**16)` (= 65,536) |
+| **`CHURN_LIMIT_QUOTIENT`** | **`uint64(2**16)` (= 65,536)** |
 
 These two parameters set the rate at which validators can enter and leave the validator set. The minimum rate is 4 entering + 4 leaving per epoch, but if there are enough validators this rate increases: if there are more than 262,144 validators (8,388,608 ETH) then an amount of validators equal to 1/65536 of the validator set size can enter, and the same amount can leave, per epoch.
 
@@ -325,10 +325,10 @@ Genesis will not start before this time, even if there are enough validators dep
 <a id="hysteresis" />
 
 | `HYSTERESIS_QUOTIENT` | `uint64(4)` |
-| - | - |
-| `HYSTERESIS_DOWNWARD_MULTIPLIER` | `uint64(1)` |
-| `HYSTERESIS_UPWARD_MULTIPLIER` | `uint64(5)` |
-| `EFFECTIVE_BALANCE_INCREMENT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000) |
+| - | :-: |
+| **`HYSTERESIS_DOWNWARD_MULTIPLIER`** | **`uint64(1)`** |
+| **`HYSTERESIS_UPWARD_MULTIPLIER`** | **`uint64(5)`** |
+| **`EFFECTIVE_BALANCE_INCREMENT`** | **`Gwei(2**0 * 10**9)` (= 1,000,000,000)** |
 
 We store validator balances in two places: (i) the "effective balance" in the validator record, and (ii) the "exact balance" in a separate record. This is done for efficiency reasons: the exact balances get changed due to rewards and penalties in every epoch, so we store them in a compact array that requires rehashing only <32 MB to update. Effective balances (which are used for all other computations that require validator balances) get updated using a **[hysteresis](https://en.wikipedia.org/wiki/Hysteresis)** formula: if the effective balance is `n` ETH, then if the exact balance goes below `n-0.25` ETH, then the effective balance is set to `n-1` ETH, and if the exact balance goes above `n+1.25` ETH the effective balance is set to `n+1` ETH.
 
@@ -432,7 +432,7 @@ To see the proposer and committee selection algorithms, which take as input (i) 
 
 | `MIN_SEED_LOOKAHEAD` | `uint64(2**0)` (= 1) | epochs | 6.4 minutes |
 | - | - | :-: | :-: |
-| `MAX_SEED_LOOKAHEAD` | `uint64(2**2)` (= 4) | epochs | 25.6 minutes |
+| **`MAX_SEED_LOOKAHEAD`** | **`uint64(2**2)` (= 4)** | **epochs** | **25.6 minutes** |
 
 See the diagram above. The `MIN_SEED_LOOKAHEAD` means that the seed used to compute proposers and committees is based on the randao mix from more than 1 epoch ago (specifically, the epoch N seed is based on the randao mix from the end of epoch N-2); this allows validators to determine their committee and proposal responsibilities >1 epoch ahead of time.
 
@@ -481,7 +481,7 @@ See the [section on slashings](#slashings) for more details, and [here](https://
 
 | `HISTORICAL_ROOTS_LIMIT` | `uint64(2**24)` (= 16,777,216) | historical roots | ~52,262 years |
 | - | - | :-: | :-: |
-| `VALIDATOR_REGISTRY_LIMIT` | `uint64(2**40)` (= 1,099,511,627,776) | validators |
+| **`VALIDATOR_REGISTRY_LIMIT`** | **`uint64(2**40)` (= 1,099,511,627,776)** | **validators** |
 
 All lists in SSZ have to have _some_ limit; 52,262 years is reasonably close to "forever" for practical purposes and ensures that Merkle branches do not get needlessly long. 1.1 trillion validators will also only be reached after a very long duration (assuming all ETH is staking, a maximum of 64 validators can be activated per epoch, so the list would take ~16 billion epochs ~= 209052 years to fill; this could be accelerated assuming clever use of 1 ETH validator slots, rewards, etc, but it would still take millennia).
 
@@ -513,8 +513,8 @@ The size of the penalty during an epoch is proportional to the number of epochs 
 
 | Epochs since finality | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 | - | - | - | - | - | - | - | - | - | - | - | - | - |
-| Leaked this epoch | 0 | 0 | 0 | 0 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
-| Total leaked since finality | 0 | 0 | 0 | 0 | 5 | 11 | 18 | 26 | 35 | 45 | 56 | 68 |
+| **Leaked this epoch** | **0** | **0** | **0** | **0** | **5** | **6** | **7** | **8** | **9** | **10** | **11** | **12** |
+| **Total leaked since finality** | **0** | **0** | **0** | **0** | **5** | **11** | **18** | **26** | **35** | **45** | **56** | **68** |
 
 `INACTIVITY_PENALTY_QUOTIENT` is the "unit" here, eg. if the total leaked is listed as 68, that means that you've lost `68/INACTIVITY_PENALTY_QUOTIENT ~= 1/246,723` of your balance.
 
