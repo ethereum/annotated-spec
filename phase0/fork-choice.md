@@ -154,7 +154,7 @@ class Store(object):
     latest_messages: Dict[ValidatorIndex, LatestMessage] = field(default_factory=dict)
 ```
 
-The member's variables here are as follows:
+The member variables here are as follows:
 
 * `time`: the current time
 * `genesis_time`: the time of the genesis block of the chain
