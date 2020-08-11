@@ -512,7 +512,7 @@ See the [Casper FFG paper](https://arxiv.org/abs/1710.09437) for a description o
 The size of the penalty during an epoch is proportional to the number of epochs that have passed since the most recent time the chain finalized; this leads to the total amount leaked growing _quadratically_ with time (note that the leak starts after 4 epochs of non-finality):
 
 | Epochs since finality | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
-| - | - | - | - | - | - | - | - | - | - | - | - | - |
+| :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | **Leaked this epoch** | **0** | **0** | **0** | **0** | **5** | **6** | **7** | **8** | **9** | **10** | **11** | **12** |
 | **Total leaked since finality** | **0** | **0** | **0** | **0** | **5** | **11** | **18** | **26** | **35** | **45** | **56** | **68** |
 
