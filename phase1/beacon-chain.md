@@ -94,7 +94,7 @@ In the current (eth1) architecture, the blockchain is simply a chain of blocks, 
 
 The eth2 architecture, starting from phase 1, is slightly more involved: instead of having one chain of blocks, we have a **beacon chain** *and* N (currently 64) **shard chains**.
 
-The beacon chain is a central chain which everyone stores, downloads and verifies, and which functions roughly like an eth1 chain (except using proof of stake instead of proof of work). The beacon chain contains two kinds of information:
+The beacon chain is a central chain that everyone stores, downloads and verifies, and which functions roughly like an eth1 chain (except using proof of stake instead of proof of work). The beacon chain contains two kinds of information:
 
 * Consensus-critical information (eg. who the current proof of stake validators are, what rewards and penalties have been assigned to them, deposits and withdrawals...)
 * Pointers (ie. hashes) to shard chain blocks and shard state
@@ -107,11 +107,11 @@ The shard chains and the beacon chain are tightly coupled with each other, conne
 
 ![](../images/shardchains.png)
 
-For a shard block to be considered part of the "canonical history" it must be (i) [available](https://github.com/ethereum/research/wiki/A-note-on-data-availability-and-erasure-coding), (ii) valid and (iii) referenced in the beacon chain via a **crosslink**. A crosslink is a set of signatures of a shard block, signed by a randomly selected **committee** of ~128 **validators** (consensus-participating PoS nodes) which attests to the shard block's validity. Because there is too much data in the shards for any single node to verify all of it (unless that node is very high-powered, which eg. an exchange may still want to run), eth2 instead relies on this random committee verification as proxy evidence that the shard block header that gets included in the beacon chain points to something which is available and valid.
+For a shard block to be considered part of the "canonical history" it must be (i) [available](https://github.com/ethereum/research/wiki/A-note-on-data-availability-and-erasure-coding), (ii) valid and (iii) referenced in the beacon chain via a **crosslink**. A crosslink is a set of signatures of a shard block, signed by a randomly selected **committee** of ~128 **validators** (consensus-participating PoS nodes) which attests to the shard block's validity. Because there is too much data in the shards for any single node to verify all of it (unless that node is very high-powered, which eg. an exchange may still want to run), eth2 instead relies on this random committee verification as proxy evidence that the shard block header that gets included in the beacon chain points to something available and valid.
 
 **NB: if the beacon chain ends up linking to an invalid shard block (this can only realistically happen in a 51% attack or similar extreme scenario), that beacon chain is invalid and should not be considered as a candidate in the [fork choice](../phase0/fork-choice.md). Invalid transactions (or state transitions) by definition can never be part of the canonical history.**
 
-This is an important philosophical point; it basically means that a 51% attack _by definition_ cannot make an invalid chain canonical, though what it potentially _can_ do (eg. by having committees crosslink invalid shard blocks) is trick nodes into accepting a non-canonical chain. Light clients are vulnerable to such attacks in non-sharded blockchains too; in sharded blockchains, every client is a light client. That said, there are techniques other than committees that try to provide a second layer of defense to ensure availability, most notably [data availability proofs](https://arxiv.org/abs/1809.09044).
+This is an important philosophical point; it means that a 51% attack _by definition_ cannot make an invalid chain canonical, though what it potentially _can_ do (eg. by having committees crosslink invalid shard blocks) is trick nodes into accepting a non-canonical chain. Light clients are vulnerable to such attacks in non-sharded blockchains too; in sharded blockchains, every client is a light client. That said, there are techniques other than committees that try to provide a second layer of defense to ensure availability, most notably [data availability proofs](https://arxiv.org/abs/1809.09044).
 
 ## Custom types
 
@@ -124,7 +124,7 @@ We define the following Python custom types for type hinting and readability:
 
 ## Configuration
 
-Configuration is not namespaced. Instead it is strictly an extension; no constants of phase 0 change, but new constants are adopted for changing behaviors.
+The configuration is not namespaced. Instead, it is strictly an extension; no constants of phase 0 change, but new constants are adopted for changing behaviors.
 
 ### Misc
 
@@ -141,7 +141,7 @@ Configuration is not namespaced. Instead it is strictly an extension; no constan
 | `MAX_SHARD_BLOCK_SIZE` | `2**20` (= 1,048,576) | bytes | - |
 | `TARGET_SHARD_BLOCK_SIZE` | `2**18` (= 262,144) |  bytes | The EIP 1559 implementation here targets blocks being 1/4 full. Note that in phase 2, counting bytes will be replaced with counting gas used. |
 | `SHARD_BLOCK_OFFSETS` | `[1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233]` | - | If a shard block is not included in the beacon chain, we try again in the next slot, but after three failed slots we start skipping slots. This serves two functions: (i) it ensures that a single state transition need only contain a maximum of 12 blocks, and (ii) in the case where there are very few validators, and so each shard is only processed very infrequently, many slots get skipped so the load of the chain is reduced. |
-| `MAX_SHARD_BLOCKS_PER_ATTESTATION` | `len(SHARD_BLOCK_OFFSETS)` | - | A shard state transition can have a theoretical maximum of 12 blocks, if it gets crosslinked >=233 slots after the previous shard block in that shard was crosslinked. |
+| `MAX_SHARD_BLOCKS_PER_ATTESTATION` | `len(SHARD_BLOCK_OFFSETS)` | - | A shard state transition can have a theoretical maximum of 12 blocks if it gets crosslinked >=233 slots after the previous shard block in that shard was crosslinked. |
 | `BYTES_PER_CUSTODY_CHUNK` | `2**12` (= 4,096) | bytes | See the [proof of custody game](#) for more details. |
 | `CUSTODY_RESPONSE_DEPTH` | `ceillog2(MAX_SHARD_BLOCK_SIZE // BYTES_PER_CUSTODY_CHUNK)` | - | 
 
@@ -163,7 +163,7 @@ Configuration is not namespaced. Instead it is strictly an extension; no constan
 | Name | Value | Unit | Duration | Explanation | 
 | - | - | :-: | :-: | :-: |
 | `ONLINE_PERIOD` | `OnlineEpochs(2**3)` (= 8) | online epochs | ~51 mins | For a client's balance to be taken as part of the 2/3 threshold used to calculate if there were sufficient attestations to crosslink a shard block, the client must have been online at least once in the last 8 epochs |
-| `LIGHT_CLIENT_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256) | epochs | ~27 hours | Swap the light client committee every ~27 hours; this means that a light client syncing the chain needs to only download one block and committee per 27 hours, making minimal light client load very light, while allowing the committee to still rotate reasonable frequently. |
+| `LIGHT_CLIENT_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256) | epochs | ~27 hours | Swap the light client committee every ~27 hours; this means that a light client syncing the chain needs to only download one block and committee per 27 hours, making minimal light client load very light, while allowing the committee to still rotate reasonably frequently. |
 
 ### Domain types
 
@@ -180,7 +180,7 @@ New domain tags for objects introduced in phase 1:
 
 ## Updated containers
 
-The following containers have updated definitions in Phase 1. The definitions are largely the same as those in phase 0, except a few new fields got added to the end to keep track of phase 1-relevant data. Readers are encouraged to skip straight to [the new containers section](#new-containers), and use this section only as a reference.
+The following containers have updated definitions in Phase 1. The definitions are largely the same as those in phase 0, except a few new fields got added to the end to keep track of phase 1-relevant data. Readers are encouraged to skip straight to [the new containers section](#new-containers) and use this section only as a reference.
 
 ### Extended `AttestationData`
 
@@ -451,7 +451,7 @@ A `ShardTransition` object declares what changes are made to a shard state in a 
 * A list of `ShardBlockHeader` objects
 * A list of `ShardState` objects
 
-Where the first `ShardState` is the state after applying the first `ShardBlockHeader` (or rather, the full shard block referenced by the header), the second `ShardState` is the state after applying the second shard block, etc. This data structure is not quite like this in practice mainly for compression reasons: we can greatly reduce the amount of data that goes on-chain by taking out extraneous data that can be re-calculated (slot, shard, proposer index), BLS-aggregating all the signatures and not including the parent roots as those are part of the `ShardState` or known in the beacon chain. The `apply_shard_transition` function will actually reconstruct the `ShardBlockHeader`s.
+Where the first `ShardState` is the state after applying the first `ShardBlockHeader` (or rather, the full shard block referenced by the header), the second `ShardState` is the state after applying the second shard block, etc. This data structure is not quite like this in practice mainly for compression reasons: we can greatly reduce the amount of data that goes on-chain by taking out extraneous data that can be re-calculated (slot, shard, proposer index), BLS-aggregating all the signatures and not including the parent roots as those are part of the `ShardState` or known in the beacon chain. The `apply_shard_transition` function will reconstruct the `ShardBlockHeader`s.
 
 We need to commit to all block headers and intermediate states, so that we can later verify the incorrectness of individual state transitions in fraud proofs if needed.
 
@@ -547,7 +547,7 @@ def compute_offset_slots(start_slot: Slot, end_slot: Slot) -> Sequence[Slot]:
     return [Slot(start_slot + x) for x in SHARD_BLOCK_OFFSETS if start_slot + x < end_slot]
 ```
 
-When a shard fails to crosslink in a given slot, it can still produce a new block in the next slot, and a crosslink would be able to include both blocks. However, if a shard does not crosslink for a long time, we deliberately start skipping slots in the shard chain. For example, if the last time a shard was crosslinked is in slot 100, then the eligible slots for shard blocks are: 101, 102, 103, 105, 108.... From there the space between eligible slots increases exponentially.
+When a shard fails to crosslink in a given slot, it can still produce a new block in the next slot, and a crosslink would be able to include both blocks. However, if a shard does not crosslink for a long time, we deliberately start skipping slots in the shard chain. For example, if the last time a shard was crosslinked is in slot 100, then the eligible slots for shard blocks are: 101, 102, 103, 105, 108... From there the space between eligible slots increases exponentially.
 
 This is done for two reasons:
 
@@ -587,7 +587,7 @@ def compute_committee_source_epoch(epoch: Epoch, period: uint64) -> Epoch:
 
 This function is used to facilitate computing **shard proposer committees** (NOT crosslink committees!) as well as **light client committees**. Both of these committees only change once per ~1 day, and it is desired that the committees are predictable ~1 day in advance.
 
-This function computes the epoch at the start of the previous period (unless we're in the first period of the whole system, in which case we it just returns the epoch at the start of the current period, ie. 0). The seed and the active validator set used to compute these committees is taken from this epoch, so that users can compute these committees in advance.
+This function computes the epoch at the start of the previous period (unless we're in the first period of the whole system, in which case it just returns the epoch at the start of the current period, ie. 0). The seed and the active validator set used to compute these committees are taken from this epoch so that users can compute these committees in advance.
 
 ### Beacon state accessors
 
@@ -708,7 +708,7 @@ def get_start_shard(state: BeaconState, slot: Slot) -> Shard:
         )
 ```
 
-Computes the starting shard of a historical epoch (that is, the shard that committee 0 in that slot is assigned to; see [here](#compute_shard_from_committee_index) for why this is done). This is done by keeping track of the `current_epoch_start_shard` in the state, and then computing historical committee counts for all slots between the current slot and the desired slot and walking backwards through them; eg. if the current start shard is 23, and we want the start shard from three slots ago, and the committee counts for the last three slots were 10, 10 and 11, then we can compute the result as `23 - 10 - 10 - 11 = -8`, wrapping around modulo 64 to get shard `(-8) % 64 = 56`.
+Computes the starting shard of a historical epoch (that is, the shard that committee 0 in that slot is assigned to; see [here](#compute_shard_from_committee_index) for why this is done). This is done by keeping track of the `current_epoch_start_shard` in the state, and then computing historical committee counts for all slots between the current slot and the desired slot and walking backward through them; eg. if the current start shard is 23, and we want the start shard from three slots ago, and the committee counts for the last three slots were 10, 10 and 11, then we can compute the result as `23 - 10 - 10 - 11 = -8`, wrapping around modulo 64 to get shard `(-8) % 64 = 56`.
 
 #### `get_latest_slot_for_shard`
 
@@ -750,7 +750,7 @@ def is_on_time_attestation(state: BeaconState,
     return attestation_data.slot == compute_previous_slot(state.slot)
 ```
 
-Only attestations from slot N-1 may be counted toward a crosslink in slot N. Attestations included after more than one slot are still useful for Casper FFG purposes (see [phase 0](../phase0/beacon-chain.md)), but they cannot contribute to crosslinking shard blocks. This was done mainly for simplicity and to minimize the number of edge cases, by preventing crosslinks from coming in to the beacon chain out-of-order.
+Only attestations from slot N-1 may be counted toward a crosslink in slot N. Attestations included after more than one slot are still useful for Casper FFG purposes (see [phase 0](../phase0/beacon-chain.md)), but they cannot contribute to crosslinking shard blocks. This was done mainly for simplicity and to minimize the number of edge cases, by preventing crosslinks from coming into the beacon chain out-of-order.
 
 #### `is_winning_attestation`
 
@@ -892,7 +892,7 @@ def validate_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 ```
 
-The main change from the phase 0 `validate_attestation` is the addition of new code to handle shard crosslinks. Note that, for efficiency reasons, an attestation does not itself contain the entire `ShardTransition` object that describes the shard chain transition that it is committing to. Instead, an attestation contains only a `shard_transition_root`. In the beacon block, there is a separate list of `ShardTransition` objects that lists the "winning" `ShardTransition` for each shard (ie. the shard transition that actually takes effect).
+The main change from phase 0 `validate_attestation` is the addition of new code to handle shard crosslinks. Note that, for efficiency reasons, an attestation does not itself contain the entire `ShardTransition` object that describes the shard chain transition that it is committing to. Instead, an attestation contains only a `shard_transition_root`. In the beacon block, there is a separate list of `ShardTransition` objects that lists the "winning" `ShardTransition` for each shard (ie. the shard transition that takes effect).
 
 Note that a delayed attestation (ie. an attestation from more than 1 slot ago) MUST commit to an empty `ShardTransition` root, as delayed attestations cannot contribute to shard transitions. This empty root requirement is introduced for efficiency purposes; the goal is to prevent old attestations from taking up unneeded space and verification time by having different root hashes. This does come at the cost that validators who did not get their attestations included on time will have to rebroadcast a new attestation containing an empty root.
 
@@ -915,7 +915,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
         state.previous_epoch_attestations.append(pending_attestation)
 ```
 
-The main difference from phase 0 is the `crosslink_success` variable, which starts off `False`, but then can be set to `True` by the `process_shard_transitions` method that gets called at the end of every slot. The intent behind this separation of computations is that there could be two different attestations (eg. this could happen because two attestations reference two beacon roots, or because a block proposer received two different attestations that partially overlap with each other, and so cannot be cleanly aggregated together) that collectively contribute to a `ShardTransition` passing the threshold.
+The main difference from phase 0 is the `crosslink_success` variable, which starts `False`, but then can be set to `True` by the `process_shard_transitions` method that gets called at the end of every slot. The intent behind this separation of computations is that there could be two different attestations (eg. this could happen because two attestations reference two beacon roots, or because a block proposer received two different attestations that partially overlap with each other, and so cannot be cleanly aggregated together) that collectively contribute to a `ShardTransition` passing the threshold.
 
 Hence, `process_attestation` simply records information about who participated, and `process_shard_transitions` does calculations on the combined data at the end of each slot (similar to how Casper FFG calculations are also processed with a delay, at the end of each epoch).
 
@@ -983,14 +983,14 @@ def apply_shard_transition(state: BeaconState, shard: Shard, transition: ShardTr
     state.shard_states[shard].slot = compute_previous_slot(state.slot)
 ```
 
-Processes the shard transitions declared in a `ShardTransition` object, verifies the shard block headers and applies the state transitions to the `shard_states` in the `BeaconState`. Note that because shard blocks are not fully included into the beacon chain (only their headers are), this only does a part of the verification; it does not check the availability and validity of the shard block bodies (note that even in phase 1, there is one validity criterion: that the declared block size equals the actual block size).
+Processes the shard transitions declared in a `ShardTransition` object, verifies the shard block headers, and applies the state transitions to the `shard_states` in the `BeaconState`. Note that because shard blocks are not fully included into the beacon chain (only their headers are), this only does a part of the verification; it does not check the availability and validity of the shard block bodies (note that even in phase 1, there is one validity criterion: that the declared block size equals the actual block size).
 
 The state transitions and verifications that _are_ processed here are:
 
 * EIP 1559 gasprice adjustments
 * BLS signature verification
 
-The signature verification is done in the aggregate; we don't care whether or not the _individual_ signatures of the shard blocks are available, rather we just combine the signatures together and verify them at once. Checking that each shard block's parent root and beacon block root are correct is done implicitly, by simply plugging the expected beacon and parent root in when _reconstructing_ the shard header; if the reconstructed shard header does not match the original, then the signatures, when verifies against the reconstructed shard headers, will not verify correctly.
+The signature verification is done in the aggregate; we don't care whether or not the _individual_ signatures of the shard blocks are available, rather we just combine the signatures and verify them at once. Checking that each shard block's parent root and beacon block root are correct is done implicitly, by simply plugging the expected beacon and parent root in when _reconstructing_ the shard header; if the reconstructed shard header does not match the original, then the signatures, when verifies against the reconstructed shard headers, will not verify correctly.
 
 ###### `process_crosslink_for_shard`
 
@@ -1115,7 +1115,7 @@ def process_shard_transitions(state: BeaconState,
     assert verify_empty_shard_transition(state, shard_transitions)
 ```
 
-Does all shard transition-related processing; combines together the above few methods.
+Does all shard transition-related processing; combines the above few methods.
 
 ##### New default validator for deposits
 
@@ -1153,7 +1153,7 @@ This allows for light clients to use a highly efficient syncing process to sync 
 
 ![](../images/light_client_sync.png)
 
-Basically, if a light client has already synced up to some historical block at time T, then it can download the committee for T + 1 day, which is Merkle-hashed into the beacon chain state (see [`BeaconState.next_light_committee`](#BeaconState)). It can then use this committee to verify light client signatures from blocks at time T + 1 day, which then tells the client what the block at time T + 1 day was. The client can repeat this procedure, at a cost of only a few kilobytes per day, until it syncs to the head.
+If a light client has already synced up to some historical block at time T, then it can download the committee for T + 1 day, which is Merkle-hashed into the beacon chain state (see [`BeaconState.next_light_committee`](#BeaconState)). It can then use this committee to verify light client signatures from blocks at time T + 1 day, which then tells the client what the block at time T + 1 day was. The client can repeat this procedure, at a cost of only a few kilobytes per day, until it syncs to the head.
 
 #### Light client processing
 

@@ -161,7 +161,7 @@ But in short:
 
 ### How does eth2 proof of stake work?
 
-The participants in eth2 proof of stake consensus are called **validators**. To become a validator, you need to deposit 32 ETH, either from the eth1 chain, or from a shard chain (when shard chains become enabled). Once you deposit 32 ETH, you are put into an **activation queue**, and some time later you become an **active validator**.
+The participants in eth2 proof of stake consensus are called **validators**. To become a validator, you need to deposit 32 ETH, either from the eth1 chain or from a shard chain (when shard chains become enabled). Once you deposit 32 ETH, you are put into an **activation queue**, and sometime later you become an **active validator**.
 
 Time on the beacon chain is divided into **epochs** and **slots**. Each slot is 12 seconds long (eg. if the chain started today at 14:00:00, and the current time is 14:01:06, then you're in the middle of slot 5; slot numbers start counting from 0). An epoch is a period of 32 slots (or 6.4 minutes). There are also longer units of time; by convention, a period of 2048 epochs (~9.1 days) is called an **eek** ("ethereum week"); some operations on the beacon chain that take a long time can be measured in eeks.
 
@@ -172,11 +172,11 @@ During each epoch, each validator makes an **attestation**. An attestation conta
 * Some other hashes (the "**source**" and "**target**" in [Casper FFG](https://arxiv.org/abs/1710.09437))
 * A signature from the validator, proving that the validator endorses all of the above
 
-The chain comes to consensus as a result of these attestations. Roughly speaking, if 2/3 of active validators sign an attestation supporting a block, that block becomes **finalized** (in reality it's more complex, taking two rounds of signing; see [the Casper FFG paper](https://arxiv.org/abs/1710.09437) for details). A finalized block can never be reverted, unlike in PoW where any block can be reverted if someone creates an even longer chain.
+The chain comes to a consensus as a result of these attestations. Roughly speaking, if 2/3 of active validators sign an attestation supporting a block, that block becomes **finalized** (in reality it's more complex, taking two rounds of signing; see [the Casper FFG paper](https://arxiv.org/abs/1710.09437) for details). A finalized block can never be reverted, unlike in PoW where any block can be reverted if someone creates an even longer chain.
 
-If a validator correctly makes attestations, they get rewarded. If a validator misses their slot, or makes an incorrect attestation, they get penalized. If a validator unambiguously contradicts themselves (eg. voting for two conflicting blocks in the same epoch), they get **slashed**. A slashed validator (i) suffers a penalty of 3-100% of their deposit, (ii) is forcibly ejected from the validator set, and (iii) has their coins forcibly locked for an additional 4 eeks before they can withdraw. In general, as long as you are running correct validator software, this will not happen to you, and as long as you stay online more than ~55-70% of the time, validating will be profitable.
+If a validator correctly makes attestations, they get rewarded. If a validator misses their slot or makes an incorrect attestation, they get penalized. If a validator unambiguously contradicts themselves (eg. voting for two conflicting blocks in the same epoch), they get **slashed**. A slashed validator (i) suffers a penalty of 3-100% of their deposit, (ii) is forcibly ejected from the validator set, and (iii) has their coins forcibly locked for an additional 4 eeks before they can withdraw. In general, as long as you are running correct validator software, this will not happen to you, and as long as you stay online more than ~55-70% of the time, validating will be profitable.
 
-A validator can voluntarily initiate an **exit** at any time, though there is a limit on how many can exit per epoch; if too many validators try to exit at the same time they will be put into a queue, and will remain active until they get to the front of the queue. After a validator successfully exits, after 1/8 of an eek they will be able to withdraw (though this functionality will only be turned on after ["the merge"](https://ethresear.ch/t/the-eth1-eth2-transition/6265) of eth1 and eth2).
+A validator can voluntarily initiate an **exit** at any time, though there is a limit on how many can exit per epoch; if too many validators try to exit at the same time they will be put into a queue and will remain active until they get to the front of the queue. After a validator successfully exits, after 1/8 of an eek they will be able to withdraw (though this functionality will only be turned on after ["the merge"](https://ethresear.ch/t/the-eth1-eth2-transition/6265) of eth1 and eth2).
 
 ### How does eth2 sharding work
 
@@ -190,7 +190,7 @@ To reduce risks, the eth2 deployment process is split into phases:
 * **Phase 1**: shard chains are activated, though they only process data, not transactions. Hence, the eth2 chain becomes useful as a data availability verification layer for rollups, but you cannot yet directly transact on it.
 * **Phase 1.5 (aka The Merge)**: the eth1 chain is shut down, and the state (ie. all balances, contracts, code, storage...) from the eth1 chain is moved into one shard of the eth2 chain. Users can transact on that shard.
 * **Phase 2**: all shards support full transaction capabilities.
-* **Phase 3+ (aka Ethereum 2.x)**: ongoing improvements to safety, efficiency and scalability, though the "basic structure" of the eth2 chain may well never again be changed.
+* **Phase 3+ (aka Ethereum 2.x)**: ongoing improvements to safety, efficiency, and scalability, though the "basic structure" of the eth2 chain may well never again be changed.
 
 See also [the roadmap](https://media.consensys.net/an-annotated-version-of-vitalik-buterins-ethereum-roadmap-5876498d4f3a):
 
@@ -214,7 +214,7 @@ We define the following Python custom types for type hinting and readability:
 | - | - | - |
 | `Slot` | `uint64` | a slot number |
 | `Epoch` | `uint64` | an epoch number (generally, epoch `i` consists of slots `EPOCH_LENGTH*i ... EPOCH_LENGTH*(i+1)-1`) |
-| `CommitteeIndex` | `uint64` | During every epoch, the validator set is randomly split up into `EPOCH_LENGTH` parts, one part for each slot in that epoch, but then within each slot that slot's validators are further divided into committees. In phase 0 this division does nothing, but in phase 1 these different committees get assigned to different shard. `CommitteeIndex` is just the type of an integer when that integer refers to the index of a committee within a slot (is it the first committee, the second, the third?) |
+| `CommitteeIndex` | `uint64` | During every epoch, the validator set is randomly split up into `EPOCH_LENGTH` parts, one part for each slot in that epoch, but then within each slot that slot's validators are further divided into committees. In phase 0 this division does nothing, but in phase 1 these different committees get assigned to a different shard. `CommitteeIndex` is just the type of an integer when that integer refers to the index of a committee within a slot (is it the first committee, the second, the third?) |
 | `ValidatorIndex` | `uint64` | Every validator is assigned a validator index upon depositing |
 | `Gwei` | `uint64` | An amount in Gwei |
 | `Root` | `Bytes32` | A Merkle root (typically of an SSZ object) |
@@ -225,7 +225,7 @@ We define the following Python custom types for type hinting and readability:
 | `BLSPubkey` | `Bytes48` | a BLS12-381 public key (see [here](https://ethresear.ch/t/pragmatic-signature-aggregation-with-bls/2105) for an explanation of the BLS signature scheme and its benefits) |
 | `BLSSignature` | `Bytes96` | a BLS12-381 signature |
 
-When you see a function like `def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:` (a real example in the spec), interpret it as "this function takes as input the beacon chain state and an integer representing a slot number, and outputs a Bytes32 which is a Merkle root". In this case the Merkle root it outputs is the root hash of the block at the given slot (as you can tell from the name); but in general, paying attention to types will help make it easier for you to understand what's going on. In addition to being a debugging aid, the strong type system also functions as a type of comment.
+When you see a function like `def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:` (a real example in the spec), interpret it as "this function takes as input the beacon chain state and an integer representing a slot number, and outputs a Bytes32 which is a Merkle root". In this case, the Merkle root it outputs is the root hash of the block at the given slot (as you can tell from the name); but in general, paying attention to types will help make it easier for you to understand what's going on. In addition to being a debugging aid, the strong type system also functions as a type of comment.
 
 ## Constants
 
@@ -243,14 +243,14 @@ The following values are (non-configurable) constants used throughout the specif
 
 ## Configuration
 
-Here, we have constants that are configurable, ie. if you adjust one of these up or down by 2x or even more, the network is likely not going to break. That said, a lot of thought went into setting these constants the way they are now, so it's better to learn the reasoning for why each of these values are set as they are.
+Here, we have configurable constants, ie. if you adjust one of these up or down by 2x or even more, the network is likely not going to break. That said, a lot of thought went into setting these constants the way they are now, so it's better to learn the reasoning for why each of these values is set as they are.
 
 ### Misc
 
 | `ETH1_FOLLOW_DISTANCE` | `uint64(2**10)` (= 1,024) |
 | - | - |
 
-To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 1,024` blocks). Assuming that the eth1 chain does not revert that far, this lets us rely on an assumption that if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 1024 blocks corresponds to a delay of ~3.7 hours (and note that getting an eth1 block _accepted_ into eth2 would take another ~1.7 hours). Historically, all problems on the eth1 net have been responded to within this period of time. Pushing this time to be even longer would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
+To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 1,024` blocks). Assuming that the eth1 chain does not revert that far, this lets us rely on an assumption that if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 1024 blocks correspond to a delay of ~3.7 hours (and note that getting an eth1 block _accepted_ into eth2 would take another ~1.7 hours). Historically, all problems on the eth1 net have been responded to within this period of time. Pushing this time to be even longer would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
 
 | `MAX_COMMITTEES_PER_SLOT` | `uint64(2**6)` (= 64) |
 | - | - |
@@ -278,7 +278,7 @@ For a committee to be secure, the chance that 2/3 of it get corrupted in any giv
 >>> def probge(n, k, p): return sum([prob(n, i, p) for i in range(k, n+1)])
 ```
 
-Calling `probge(128, 86, 1/3)` (86 is the smallest integer above 128 * 2/3) returns `5.55 * 10**-15` (ie. 5.55 in a quadrillion). This is an extremely low probability, with comfortable bounds to take into account the possibility an attacker will "grind" many random seeds to try to get a favorable committee (though this is extremely difficult with RANDAO and especially VDFs). If the committee size were instead 64, this probability would be much higher, and so committees would no longer sufficiently secure with an attacker with 1/3 of total stake. Increasing the committee size to 256, on the other hand, would be superfluous and only add needless inefficiency.
+Calling `probge(128, 86, 1/3)` (86 is the smallest integer above 128 * 2/3) returns `5.55 * 10**-15` (ie. 5.55 in a quadrillion). This is an extremely low probability, with comfortable bounds to take into account the possibility an attacker will "grind" many random seeds to try to get a favorable committee (though this is extremely difficult with RANDAO and especially VDFs). If the committee size were instead 64, this probability would be much higher, and so committees would no longer sufficiently secure with an attacker with 1/3 of the total stake. Increasing the committee size to 256, on the other hand, would be superfluous and only add needless inefficiency.
 
 | `MAX_VALIDATORS_PER_COMMITTEE` | `uint64(2**11)` (= 2,048) |
 | - | - |
@@ -291,7 +291,7 @@ The maximum supported validator count is `2**22` (=4,194,304), or ~134 million E
 | - | - |
 |`CHURN_LIMIT_QUOTIENT` | `uint64(2**16)` (= 65,536) |
 
-These two parameters set the rate at which validators can enter and leave the validator set. The minimum rate is 4 entering + 4 leaving per epoch, but if there are enough validators this rate increases: if there are more than 262,144 validators (8,388,608 ETH) then an amount of validators equal to 1/65536 of the validator set size can enter, and the same amount can leave, per epoch.
+These two parameters set the rate at which validators can enter and leave the validator set. The minimum rate is 4 entering + 4 leaving per epoch, but if there are enough validators this rate increases: if there are more than 262,144 validators (8,388,608 ETH) then a number of validators equal to 1/65536 of the validator set size can enter, and the same amount can leave, per epoch.
 
 The goal of rate-limiting entry and exit is to prevent a large portion of malicious validators from performing some malicious action and then immediately leaving to escape being slashed. The main malicious action we are worried about is finalizing two incompatible blocks. The Casper FFG protocol (see paper [here](https://arxiv.org/abs/1710.09437)) ensures that this can only happen if at least 1/3 of validators commit a provably malicious action, which they can be slashed for; however, if they withdraw first they could conceivably dodge this penalty.
 
@@ -315,7 +315,7 @@ Number of rounds in the swap-or-not shuffle; for more into see the [`compute_shu
 | `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `uint64(2**14)` (= 16,384) |
 | - | - |
 
-Number of validators deposited needed to start the eth2 chain. This gives 524,288 ETH, high enough to put attacking out of the reach of all but a few very wealthy actors.
+The number of validators deposited needed to start the eth2 chain. This gives 524,288 ETH, high enough to put attacking out of the reach of all but a few very wealthy actors.
 
 | `MIN_GENESIS_TIME` | `uint64(1578009600)` (Jan 3, 2020) |
 | - | - |
@@ -330,7 +330,7 @@ Genesis will not start before this time, even if there are enough validators dep
 | `HYSTERESIS_UPWARD_MULTIPLIER` | `uint64(5)` |
 | `EFFECTIVE_BALANCE_INCREMENT` | `Gwei(2**0 * 10**9)` (= 1,000,000,000) |
 
-We store validator balances in two places: (i) the "effective balance" in the validator record, and (ii) the "exact balance" in a separate record. This is done for efficiency reasons: the exact balances get changed due to rewards and penalties in every epoch, so we store them in a compact array that requires rehashing only <32 MB to update. Effective balances (which are used for all other computations that require validator balances) get updated using a **[hysteresis](https://en.wikipedia.org/wiki/Hysteresis)** formula: if the effective balance is `n` ETH, then if the exact balance goes below `n-0.25` ETH, then the effective balance is set to `n-1` ETH, and if the exact balance goes above `n+1.25` ETH the effective balance is set to `n+1` ETH.
+We store validator balances in two places: (i) the "effective balance" in the validator record, and (ii) the "exact balance" in a separate record. This is done for efficiency reasons: the exact balances get changed due to rewards and penalties in every epoch, so we store them in a compact array that requires rehashing only <32 MB to update. Effective balances (which are used for all other computations that require validator balances) get updated using a **[hysteresis](https://en.wikipedia.org/wiki/Hysteresis)** formula: if the effective balance is `n` ETH, and if the exact balance goes below `n-0.25` ETH, then the effective balance is set to `n-1` ETH, and if the exact balance goes above `n+1.25` ETH the effective balance is set to `n+1` ETH.
 
 This ensures that an attacker can't make effective balances update every epoch and thus cause processing the chain to become very slow by repeatedly nudging the exact balances above and then below some threshold; instead, the exact balance must change by at least a full 0.5 ETH to trigger an effective balance update.
 
@@ -346,16 +346,16 @@ A minimum deposit amount prevents DoS attacks that involve spamming the chain wi
 
 There are two choices here that need justification. First, why force validator slots to be a fixed amount of ETH at all, instead of allowing them to be any size? Second, why a fixed size of 32 ETH, and not 1 ETH or 1000 ETH?
 
-The problem with allowing variable balances is that algorithms for random selection (eg. of block proposers) and shuffling (for committees) become much more complicated. You would need an algorithm to select a block proposer such that the probability that the algorithm selects a particular proposer is proportional to the proposer's balance, in a context where balances are changing and validators are always entering and exiting. This could be done with [fancy binary tree structures](https://algorithmist.com/wiki/Fenwick_tree) but would be complicated. In the case of committee selection, a wealthy validator cannot be assigned to one committee (as they would then dominate and be able to attack it); their weight would need to be split up among many committees. It's much easier to solve both problems by simply formally representing wealthy validators as being many separate validators of the same size.
+The problem with allowing variable balances is that algorithms for a random selection (eg. of block proposers) and shuffling (for committees) become much more complicated. You would need an algorithm to select a block proposer such that the probability that the algorithm selects a particular proposer is proportional to the proposer's balance, in a context where balances are changing and validators are always entering and exiting. This could be done with [fancy binary tree structures](https://algorithmist.com/wiki/Fenwick_tree) but would be complicated. In the case of committee selection, a wealthy validator cannot be assigned to one committee (as they would then dominate and be able to attack it); their weight would need to be split up among many committees. It's much easier to solve both problems by simply formally representing wealthy validators as being many separate validators of the same size.
 
-The 32 ETH choice is based on this logic: https://medium.com/@VitalikButerin/parametrizing-casper-the-decentralization-finality-time-overhead-tradeoff-3f2011672735. If the deposit size is higher, then fewer people can participate, risking centralization, but if the deposit size is lower, then the chain suffers higher cost of verification ("overhead" in the post), risking sacrificing decentralization in a different way.
+The 32 ETH choice is based on this logic: https://medium.com/@VitalikButerin/parametrizing-casper-the-decentralization-finality-time-overhead-tradeoff-3f2011672735. If the deposit size is higher, then fewer people can participate, risking centralization, but if the deposit size is lower, then the chain suffers a higher cost of verification ("overhead" in the post), risking sacrificing decentralization differently.
 
 [Economic review](https://medium.com/@thomasborgers/ethereum-2-0-economic-review-1fc4a9b8c2d9) suggests that at the current 32 ETH level the hardware costs of staking are enough to make a significant, though not fatal, dent on validator returns. This implies that if the deposit size were reduced to 16 ETH, then the overhead of the chain would double, and the rewards to each validator would halve, so staking with a single validator slot would be four-times more difficult, already a potentially unsafe level. Hence, 32 ETH is the most inclusive deposit size that does not become self-defeating due to increasing overhead.
 
 | `EJECTION_BALANCE` | `Gwei(2**4 * 10**9)` (= 16,000,000,000) |
 | - | - |
 
-Validators that go below 16 ETH get ejected (ie. forcibly exited). This minimum ensures that all active validators' balances are (almost always) within a 2x "band" (maximum effective balance is 32 ETH; anything above is just saved rewards and does not count for staking purposes). This narrow range ensures that committees are stable; if higher disparities were permitted, there would be higher risk that a few wealthy malicious validators could randomly enter the same committee and take it over with their larger balances.
+Validators that go below 16 ETH get ejected (ie. forcibly exited). This minimum ensures that all active validators' balances are (almost always) within a 2x "band" (maximum effective balance is 32 ETH; anything above is just saved rewards and does not count for staking purposes). This narrow range ensures that committees are stable; if higher disparities were permitted, there would be a higher risk that a few wealthy malicious validators could randomly enter the same committee and take it over with their larger balances.
 
 ### Initial values
 
@@ -406,7 +406,7 @@ There are two reasons not to go lower than 32 slots per epoch:
 1. Either the slot duration would have to become longer (which would increase block times and hence reduce user experience) or the epoch duration would decrease, increasing overhead of processing the chain
 2. We want to have a guarantee that there will almost certainly be at least one honest proposer per epoch
 
-Going higher than 32 would needlessly make it take longer for a block to reach finality (this takes 2 epochs). Hence, 32 slots per epoch appears optimal.
+Going higher than 32 would needlessly make it take longer for a block to reach finality (this takes 2 epochs). Hence, 32 slots per epoch appear optimal.
 
 <a id="seeds" />
 
@@ -414,11 +414,11 @@ Going higher than 32 would needlessly make it take longer for a block to reach f
 
 In any proof of stake system, we need to have some mechanism for determining who is the proposer of a block (as well as other roles that don't require all active validators to participate in simultaneously). In PoW, this happens automatically: everyone is trying to create a block, but on average only one person succeeds every (13 seconds in Ethereum | 600 seconds in Bitcoin), and you can't predict who will succeed ahead of time. In PoS, however, this random selection must be done explicitly.
 
-Clearly, there is no such thing as true "randomness" in a blockchain, because all nodes must come to consensus on the result and different computers calling `random()` will get different outputs. Instead, we generate **[pseudo-randomness](https://en.wikipedia.org/wiki/Pseudorandomness)** from a **seed** that is computed and updated as part of the blockchain.
+Clearly, there is no such thing as true "randomness" in a blockchain, because all nodes must come to a consensus on the result and different computers calling `random()` will get different outputs. Instead, we generate **[pseudo-randomness](https://en.wikipedia.org/wiki/Pseudorandomness)** from a **seed** that is computed and updated as part of the blockchain.
 
 The challenge is how to make the seed unpredictable. If the seed was predictable (say, we put `hash(42)` in as the seed at genesis), then validators could strategically decide when to deposit and withdraw or what their public keys is to target being a block proposer (or being part of a particular committee), which would open the door to attacks (this is one type of **stake grinding**).
 
-To fully prevent this type of manipulation, we use a mechanism where the validator set is fixed 4 epochs in advance (ie. operations in epoch N can only affect the validator set from epoch N+5 onwards), and there is a procedure that constantly updates the seed. Hence, validator set manipulation is ineffective because the seed valid in some epoch can be guaranteed to update unpredictably for some time after the validator set for that epoch is fixed. That said, we still need a procedure for how the seed actually gets updated.
+To fully prevent this type of manipulation, we use a mechanism where the validator set is fixed 4 epochs in advance (ie. operations in epoch N can only affect the validator set from epoch N+5 onwards), and there is a procedure that constantly updates the seed. Hence, validator set manipulation is ineffective because the seed valid in some epoch can be guaranteed to update unpredictably for some time after the validator set for that epoch is fixed. That said, we still need a procedure for how the seed gets updated.
 
 We update the seed (or rather, the **randao mix**, which is used to generate the seed) every block using a mechanism inspired by [RANDAO](https://github.com/randao/randao): the proposer of a block provides a hash that gets mixed into (ie. XOR'd into) the seed; this hash is unknown to the public ahead of time, but it is pre-committed, in the sense that there is only one valid hash that the proposer could submit. This is done with by BLS-signing the current epoch; the BLS signature scheme has the property that for any given key there is exactly one valid signature for any given message (as opposed to eg. ECDSA where there are many possible valid signatures that can be made with the same key for the same message).
 
@@ -426,7 +426,7 @@ We update the seed (or rather, the **randao mix**, which is used to generate the
 
 The randao mix at the start of epoch N is used to compute the seed for epoch N+1; this ensures that the proposer and committee roles are known one epoch ahead of time, giving validators a chance to prepare.
 
-This mechanism ensures that the proposer has only one "bit of manipulation power": they can either set the next seed to some hash R1 by publishing their block normally, or to some other hash R2 by not publishing (and sacrificing their block reward). Note also that only the last proposer truly has any manipulation power, because any other proposer knows that the seed will be altered in unpredictable ways by future proposers, so they have know way to know the effects of any manipulation they attempt. These two factors together make "stake grinding" _by manipulating the seed_ very difficult and almost always not worth it.
+This mechanism ensures that the proposer has only one "bit of manipulation power": they can either set the next seed to some hash R1 by publishing their block normally, or to some other hash R2 by not publishing (and sacrificing their block reward). Note also that only the last proposer truly has any manipulation power, because any other proposer knows that the seed will be altered in unpredictable ways by future proposers, so they have no way to know the effects of any manipulation they attempt. These two factors together make "stake grinding" _by manipulating the seed_ very difficult and almost always not worth it.
 
 To see the proposer and committee selection algorithms, which take as input (i) the active validator set and (ii) the seed, and output the current block proposer and the committees, see [here](#compute_shuffled_index).
 
@@ -436,7 +436,7 @@ To see the proposer and committee selection algorithms, which take as input (i) 
 
 See the diagram above. The `MIN_SEED_LOOKAHEAD` means that the seed used to compute proposers and committees is based on the randao mix from more than 1 epoch ago (specifically, the epoch N seed is based on the randao mix from the end of epoch N-2); this allows validators to determine their committee and proposal responsibilities >1 epoch ahead of time.
 
-The `MAX_SEED_LOOKAHEAD` is actually the minimum delay on validator actiations and exits; it basically means that validators strategically activating and exiting can only affect the seed 4 epochs into the future, leaving a space of 3 epochs within which proposers can mix-in unknown info to scramble the seed and hence make stake grinding via activating or exiting validators non-viable.
+The `MAX_SEED_LOOKAHEAD` is actually the minimum delay on validator activations and exits; it basically means that validators strategically activating and exiting can only affect the seed 4 epochs into the future, leaving a space of 3 epochs within which proposers can mix-in unknown info to scramble the seed and hence make stake grinding via activating or exiting validators non-viable.
 
 | `MIN_EPOCHS_TO_INACTIVITY_PENALTY` | `uint64(2**2)` (= 4) | epochs | 25.6 minutes |
 | - | - | :-: | :-: |
@@ -453,7 +453,7 @@ The eth2 chain learns about eth1 blocks (so that it can verify Merkle proofs of 
 | `SLOTS_PER_HISTORICAL_ROOT` | `uint64(2**13)` (= 8,192) | slots | ~27 hours |
 | - | - | :-: | :-: |
 
-The eth2 chain contains a Merkle tree of its own historical blocks. This is done using two data structures: (i) a rotating "recent history log" (`state.block_roots` and `state.state_roots`) and (ii) an ongoing accumulator (`state.historical_roots`) which stores Merkle roots of recent history logs. The total state size is optimized if the two have roughly similar length, both `~sqrt(length of chain)`; setting this to 8192 slots ensures that this condition is satisfied at 67,108,864 slots (= 1,024 eeks, ~= 20 years). If desired, the lengths can be rebalanced after a century to improve efficiency, though the gains will be negligible.
+The eth2 chain contains a Merkle tree of its own historical blocks. This is done using two data structures: (i) a rotating "recent history log" (`state.block_roots` and `state.state_roots`) and (ii) an ongoing accumulator (`state.historical_roots`) which stores Merkle roots of recent history logs. The total state size is optimized if the two have a roughly similar length, both `~sqrt(length of chain)`; setting this to 8192 slots ensures that this condition is satisfied at 67,108,864 slots (= 1,024 eeks, ~= 20 years). If desired, the lengths can be rebalanced after a century to improve efficiency, though the gains will be negligible.
 
 | `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` | `uint64(2**8)` (= 256) | epochs | ~27 hours |
 | - | - | :-: | :-: |
@@ -583,9 +583,9 @@ This struct exists in the state to store the current version of the eth2 protoco
 
 The intention is that the "current fork version" equals `state.fork.previous_version` if the current epoch is less than `state.fork.epoch`, and `state.fork.current_version` if the current epoch is equal to or greater than `state.fork.epoch`. The current fork version is mixed into the signed data in all BLS-signed messages (see [`get_domain`](#get_domain)).
 
-Note that all messages (blocks, attestations, VoluntaryExits...) have some associated epoch number. Blocks are processed at the slot that is their declared slot, but attestations and other structures do have one edge case: an attestation could be crhe eated with some self-declared epoch `E1`, but only included on chain at some later epoch `E2 > E1`. The edge case is, what if `E1` is before the fork but `E2` is after it? Then, even though the message is processed during the new fork era, the message is validated assuming the signed data mixes in the old fork version. This is why we maintain `state.fork.previous_version` in the state.
+Note that all messages (blocks, attestations, VoluntaryExits...) have some associated epoch number. Blocks are processed at the slot that is their declared slot, but attestations and other structures do have one edge case: an attestation could be created with some self-declared epoch `E1`, but only included on-chain at some later epoch `E2 > E1`. The edge case is, what if `E1` is before the fork but `E2` is after it? Then, even though the message is processed during the new fork era, the message is validated assuming the signed data mixes in the old fork version. This is why we maintain `state.fork.previous_version` in the state.
 
-If someone wants to continue the old chain, they can simply not implement the changes, including not changing `state.fork`. In this case, starting from the fork epoch, blocks from one fork will be invalid in the other fork. Attestations and other objects made before the fork could be included into both forks, but attestations and other objects made after the fork would only be valid either on one side or the other.
+If someone wants to continue the old chain, they can simply not implement the changes, including not changing `state.fork`. In this case, starting from the fork epoch, blocks from one fork will be invalid in the other fork. Attestations and other objects made before the fork could be included in both forks, but attestations and other objects made after the fork would only be valid either on one side or the other.
 
 #### `ForkData`
 
@@ -663,7 +663,7 @@ class IndexedAttestation(Container):
     signature: BLSSignature
 ```
 
-An `AttestationData`, a signature and a list of indices that participated. This is the format of an attestation when it is included in `AttesterSlashing` objects to slash validators for misbehavior. The idea is that attestations imported from foreign chains may not share the same committees as the current chain, so we need to explicitly provide a list of which validators participated so that the attestation can be verified, and if needed the participants slashed.
+An `AttestationData`, a signature, and a list of indices that participated. This is the format of an attestation when it is included in `AttesterSlashing` objects to slash validators for misbehavior. The idea is that attestations imported from foreign chains may not share the same committees as the current chain, so we need to explicitly provide a list of which validators participated so that the attestation can be verified, and if needed the participants slashed.
 
 #### `PendingAttestation`
 
@@ -686,7 +686,7 @@ class Eth1Data(Container):
     block_hash: Bytes32
 ```
 
-Every eth2 block contains a vote for an eth1 block. This vote contains  the hash of the eth1 block, and to allow more convenient verification of deposits, it also contains the root of the deposit tree and the number of deposits already made. Technically, the deposit tree root and size would be Merkle-proven from the eth1 block hash, but this would involve verifying a hexary RLP Patricia tree Merkle branch, which is needlessly complex.
+Every eth2 block contains a vote for an eth1 block. This vote contains the hash of the eth1 block, and to allow more convenient verification of deposits, it also contains the root of the deposit tree and the number of deposits already made. Technically, the deposit tree root and size would be Merkle-proven from the eth1 block hash, but this would involve verifying a hexary RLP Patricia tree Merkle branch, which is needlessly complex.
 
 #### `HistoricalBatch`
 
@@ -706,7 +706,7 @@ The process for someone on eth1 to deposit to become a validator on eth2 is as f
 2. Send 32 ETH to the deposit contract by calling its `deposit` function, and in that call provide as arguments the `pubkey`, the `withdrawal_credentials` and a `signature`, signed with the pubkey, of both keys (and the amount deposited, which could under special circumstances be something other than 32 ETH). 
 3. The deposit contract maintains a **deposit tree**; when it processes your function call, it adds your deposit (a `DepositData` record) to the deposit tree
 4. Once the eth2 chain becomes aware of an eth1 block after you deposited (through the Eth1Data voting procedure), the eth2 chain "knows" the root hash of a deposit tree that your `DepositData` record is part of.
-5. Once this happens, eventually an eth2 proposer will include a Merkle branch proving your deposit, and at that point you will get scheduled for activation. Note that proposers are _required_ to include as many deposits as possible, and to process deposits sequentially, so there is no possibility that your deposit will never be processed because proposers are mean or lazy.
+5. Once this happens, eventually an eth2 proposer will include a Merkle branch proving your deposit, and at that point, you will get scheduled for activation. Note that proposers are _required_ to include as many deposits as possible, and to process deposits sequentially, so there is no possibility that your deposit will never be processed because proposers are mean or lazy.
 
 #### `DepositMessage`
 
@@ -720,7 +720,7 @@ class DepositMessage(Container):
 This is the data that the `signature` in the `DepositData` is signing over. The signature is necessary, and must sign over all three of these fields, for two reasons:
 
 1. There must be a signature signing over the pubkey itself as a proof of possession to guard against rogue key attacks (see [here](https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html#mjx-eqn-eqagg) for a description on what rogue key attacks on BLS aggregation are and how proofs of possession, or "prov[ing] knowledge of the secret key (POSK)" solve this problem).
-2. There is a rule that there can only be one validator with each pubkey (this rule is there to prevent deposits from being replayed; while this is a non-issue in phase 0 as deposits must be processed sequentially, in phase 2+ depositors from shards are responsible for getting their own deposits included, so they may be included out-of-order). However, this opens up an attack: if someone is already depositing, you can front-run their deposit with your own deposit that has the same pubkey but a different withdrawal credentials (or a lower amount), effectively causing their funds to be destroyed. Requiring the withdrawal credentials and the amount to be signed by the public key prevents this.
+2. There is a rule that there can only be one validator with each pubkey (this rule is there to prevent deposits from being replayed; while this is a non-issue in phase 0 as deposits must be processed sequentially, in phase 2+ depositors from shards are responsible for getting their own deposits included, so they may be included out-of-order). However, this opens up an attack: if someone is already depositing, you can front-run their deposit with your own deposit that has the same pubkey but different withdrawal credentials (or a lower amount), effectively causing their funds to be destroyed. Requiring the withdrawal credentials and the amount to be signed by the public key prevents this.
   
 #### `DepositData`
 
@@ -751,12 +751,12 @@ The block header of a beacon chain block: contains the slot, the proposer index,
 
 #### `[Aside: domain separation]`
 
-Domain separation in eth2 is done to prevent situations where a signature of an object of one type and context is accidentally a valid signature of an object in a different type or in a different context. This could happen because the same data happens to be valid as multiple data types; such situations could conceivably be triggered by attackers to cause slashings or other problems. Domain separation unambiguously makes this impossible.
+Domain separation in eth2 is done to prevent situations where a signature of an object of one type and context is accidentally a valid signature of an object in a different type or a different context. This could happen because the same data happens to be valid as multiple data types; such situations could conceivably be triggered by attackers to cause slashings or other problems. Domain separation unambiguously makes this impossible.
 
 There are two main types of domain separation in eth2:
 
 * **Cross-chain domain separation**: a message signed for one eth2 chain should not be valid in any other eth2 chain (eg. mainnet vs testnet, testnet vs another testnet, a hypothetical eth2 vs "eth2 classic" fork)
-* **Cross-context domain separation**: a signature of an attestation should not be valid as a signature of a beacon block, etc etc.
+* **Cross-context domain separation**: a signature of an attestation should not be valid as a signature of a beacon block, etc.
 
 We achieve domain separation by mixing in a domain hash whenever we sign a message; that is, when we sign some `object`, we're really signing `hash(root_hash(object), domain_hash)`. The domain hash itself mixes together the `domain_type` and the `fork_version` (representing the chain), see [`get_domain`](#get_domain) for the logic of how this works.
 
@@ -806,7 +806,7 @@ class Attestation(Container):
     signature: BLSSignature
 ```
 
-A record specifying that part of some committee (using a bitfield to identify which part) signed some `AttestationData`. Eth2 [uses BLS signature aggregation](https://ethresear.ch/t/pragmatic-signature-aggregation-with-bls/2105) for efficiency, so instead of every validator's attestation being included separately, attestations first get broadcasted to an aggregation layer in the network, and then the block proposer can merge all attestations that sign the exact same `AttestationData` (in the normal case this is most of them) into a single `Attestation` that gets included on chain.
+A record specifying that part of some committee (using a bitfield to identify which part) signed some `AttestationData`. Eth2 [uses BLS signature aggregation](https://ethresear.ch/t/pragmatic-signature-aggregation-with-bls/2105) for efficiency, so instead of every validator's attestation being included separately, attestations first get broadcasted to an aggregation layer in the network, and then the block proposer can merge all attestations that sign the exact same `AttestationData` (in the normal case this is most of them) into a single `Attestation` that gets included on-chain.
 
 #### `Deposit`
 
@@ -816,7 +816,7 @@ class Deposit(Container):
     data: DepositData
 ```
 
-Proof that a validator deposited. These get processed sequentially in order of index; each proof is a Merkle branch proving that the deposit actually is in the correct position in the deposit tree that was created by the eth1 deposit contract.
+Proof that a validator deposited. These get processed sequentially in order of index; each proof is a Merkle branch proving that the deposit is in the correct position in the deposit tree that was created by the eth1 deposit contract.
 
 #### `VoluntaryExit`
 
@@ -845,7 +845,7 @@ class BeaconBlockBody(Container):
     voluntary_exits: List[SignedVoluntaryExit, MAX_VOLUNTARY_EXITS]
 ```
 
-The "main" part of a beacon block. The most important thing in here is the attestations, as these need to get included so the chain can track its own finality status and apply rewards and penalties, but this also includes slashings, deposits, voluntary exits, the revealed value to adjust the block's randomness seed, an eth1 vote and an open "graffiti" field.
+The "main" part of a beacon block. The most important thing in here is the attestations, as these need to get included so the chain can track its own finality status and apply rewards and penalties, but this also includes slashings, deposits, voluntary exits, the revealed value to adjust the block's randomness seed, an eth1 vote, and an open "graffiti" field.
 
 #### `BeaconBlock`
 
@@ -900,7 +900,7 @@ class BeaconState(Container):
 This is the most important data structure here; it is the thing that the state transition function that is defined in this spec is modifying. This contains all of the information that is needed to process the next beacon block, and can be split into a few categories:
 
 * Miscellanea and versioning (slot, fork version, genesis time...)
-* History that needs to be accessed: historical block hashes, state roots, randomness seeds....
+* History that needs to be accessed: historical block hashes, state roots, randomness seeds...
 * Data needed to maintain the eth1 voting system
 * The validator registry (plus the separate array of exact balances)
 * Per-epoch sums of slashings (used to keep track of how many got slashed so that proportional penalties can be calculated)
@@ -1033,7 +1033,7 @@ When a validator is active, they get assigned the full set of validator responsi
 * Making an attestation in every epoch, which includes (i) a vote on the most recent head of the beacon chain, (ii) the Casper FFG source and target checkpoint blocks, and (iii) in phase 1+ votes on shard blocks
 * Occasionally being selected as the proposer of a beacon block or (in phase 1+) a shard block
 
-A validator remains active until they either (i) sign a `VoluntaryExit` message that is included on chain, (ii) fall below the minimum balance of 16 ETH or (iii) get slashed.
+A validator remains active until they either (i) sign a `VoluntaryExit` message that is included on-chain, (ii) fall below the minimum balance of 16 ETH, or (iii) get slashed.
 
 Note that in all three cases, the exiting step is done with the `initiate_validator_exit` function, which _puts the validator in a queue_ for exiting. Hence, even a slashed validator can remain active temporarily. This is awkward, but was done for three reasons:
 
@@ -1041,7 +1041,7 @@ Note that in all three cases, the exiting step is done with the `initiate_valida
 2. Even in a situation where so many validators are exiting that the exit queue is more than 4 eeks long (4 eeks being the time until a slashed validator can withdraw), validators never have the incentive to self-slash to exit more quickly.
 3. To prevent mass slashings from decreasing the validator set size (if that did happen, it would reduce the size of the slashable intersection needed for a successful attack against a chain).
 
-Note that currently, being slashed _does_ immediately reduce a validator's balance by 1/32, which effects the denominator in the 2/3 finality calculation, but the effect of this is very small.
+Note that currently, being slashed _does_ immediately reduces a validator's balance by 1/32, which affects the denominator in the 2/3 finality calculation, but the effect of this is very small.
 
 The exit queue is processed at the same rate as the activation queue, and exiting has a similar 4 epoch delay. After a validator exits, they are eligible to withdraw after `MIN_VALIDATOR_WITHDRAWABILITY_DELAY` (~1 day) if they exit without being slashed, and `EPOCHS_PER_SLASHINGS_VECTOR` (4 eeks) if they exit due to being slashed.
 
@@ -1191,7 +1191,7 @@ def compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32) ->
     return index
 ```
 
-Eth2 needs some form of "random sampling" in order to assign validators to committees; if each validator could choose which committee they are on, a small portion of malicious validators could target one specific shard to attack and make false attestations for that shard. We can model this as a shuffling algorithm, taking an array of length N (filled with the active validator indices in that epoch) and pseudorandomly shuffling it (eg. `[0, 1, 2, 3, 5, 6] -> [3, 2, 0, 5, 6, 1]`); the committees can then just be consecutive slices of the desired length of the output array.
+Eth2 needs some form of "random sampling" to assign validators to committees; if each validator could choose which committee they are on, a small portion of malicious validators could target one specific shard to attack and make false attestations for that shard. We can model this as a shuffling algorithm, taking an array of length N (filled with the active validator indices in that epoch) and pseudorandomly shuffling it (eg. `[0, 1, 2, 3, 5, 6] -> [3, 2, 0, 5, 6, 1]`); the committees can then just be consecutive slices of the desired length of the output array.
 
 There are a few desiderata for this shuffling algorithm:
 
@@ -1212,7 +1212,7 @@ The swap-or-not algorithm works by performing 90 rounds of the following procedu
 * Choose a random "pivot" `p`
 * For every index `x`, maybe swap the value at position `x` with the value at `p-x` (wrapping around the list if necessary). The "maybe" is determined by using a hash function to pseudorandomly generate `N` bits (`N` being the size of the list being shuffled) and checking if the `max(x, p-x)`'th bit equals one (this trickery is done to ensure that you get the same answer for `x` and `p-x`)
 
-It can be efficiently run forwards or backwards (you don't have to generate all `N` bits at each round, just the chunk that contains `max(x, p-x)`), and is fairly low-overhead.
+It can be efficiently run forwards or backward (you don't have to generate all `N` bits at each round, just the chunk that contains `max(x, p-x)`), and is fairly low-overhead.
 
 #### `compute_proposer_index`
 
@@ -1313,7 +1313,7 @@ def compute_fork_digest(current_version: Version, genesis_validators_root: Root)
     return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
 ```
 
-The first four bytes of the fork digest are used on the p2p layer to separate validators of different chains out into different networks.
+The first four bytes of the fork digest are used on the p2p layer to separate validators of different chains into different networks.
 
 #### `compute_domain`
 
@@ -1405,7 +1405,7 @@ def get_randao_mix(state: BeaconState, epoch: Epoch) -> Bytes32:
     return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
 ```
 
-In the state, we store an array of historical randao mixes (aka pseudorandomness seeds). This is needed because for many reasons we want to be able to calculate historical committees. Sometimes we care about very recent history (eg. attestations from epoch N can get included in epoch N+1, so the end-of-epoch processing of epoch N+1 needs to know what the randomness seed used in epoch N was so that it can compute the committes of that epoch), but sometimes we want to look far back, eg. we want to be able to calculate committees from months ago to verify slashings. Having a 32-eek historical store of randomness seeds helps us do this.
+In the state, we store an array of historical randao mixes (aka pseudorandomness seeds). This is needed because for many reasons we want to be able to calculate historical committees. Sometimes we care about very recent history (eg. attestations from epoch N can get included in epoch N+1, so the end-of-epoch processing of epoch N+1 needs to know what the randomness seed used in epoch N was so that it can compute the committees of that epoch), but sometimes we want to look far back, eg. we want to be able to calculate committees from months ago to verify slashings. Having a 32-eek historical store of randomness seeds helps us do this.
 
 #### `get_active_validator_indices`
 
@@ -1445,7 +1445,7 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
 
 Returns the randomness seed for the given epoch. Note the precise way the wiring is done here: the seed _relevant in_ the given epoch is the seed _generated_ 5 epochs ago. For simplicity, you should mentally think of this as just `get_randao_mix(state, Epoch(epoch - MIN_SEED_LOOKAHEAD - 1))`.
 
-The technical subtlety here is that the historical randomness seeds are stored in an array that overwrites itself in a cyclic fashion, eg. if `EPOCHS_PER_HISTORICAL_VECTOR` were equal to 10, and the current epoch was 53, then `state.randao_mixes` would contain 10 seeds from epochs `[50, 51, 52, 53, 44, 45, 46, 47, 48, 49]`. So if you were to to call `get_seed` during epoch 53, if would return the value in the array at position `(53 - 1 - 4) % 10 = 8`, wrapping back around to the end.
+The technical subtlety here is that the historical randomness seeds are stored in an array that cyclically overwrites itself, eg. if `EPOCHS_PER_HISTORICAL_VECTOR` were equal to 10, and the current epoch was 53, then `state.randao_mixes` would contain 10 seeds from epochs `[50, 51, 52, 53, 44, 45, 46, 47, 48, 49]`. So if you were to call `get_seed` during epoch 53, it would return the value in the array at position `(53 - 1 - 4) % 10 = 8`, wrapping back around to the end.
 
 The `+ EPOCHS_PER_HISTORICAL_VECTOR` is added to ensure that in the exceptional case where `epoch < 5`, the "wrap back around to the end" behavior would still work, but the spec would avoid having any negative numbers even in the middle of the computation (this was an agreed-upon goal for the spec; the simplicity of being able to represent almost all integers with `uint64` outweighed the small complexity increases such as here).
 
@@ -1468,7 +1468,7 @@ Returns the number of committees in each slot (and in phase 1+, the number of sh
 
 If the number of validators is less than this, then we decrease the number of committees per slot to ensure that each committee remains a safe size, though at the cost of not crosslinking every shard in every slot (instead it would rotate: eg. if there were only 25 committees per slot, then slot 1 would process shards 0...24, slot 2 would process 25...49, slot 3 would process 50...63 and wrap around to also process 0...10, etc.).
 
-If there are not enough validators for even a single full committee (that is, less than 128 \* 32 = 4,096 validators, or 124,288 ETH), then committee sizes begin to drop, though in that case low committee sizes would arguably ve small issue relative to the much larger problem that there would exist many actors that could unilaterally launch a 51% attack.
+If there are not enough validators for even a single full committee (that is, less than 128 \* 32 = 4,096 validators, or 124,288 ETH), then committee sizes begin to drop, though in that case, low committee sizes would arguably ve small issue relative to the much larger problem that there would exist many actors that could unilaterally launch a 51% attack.
 
 #### `get_beacon_committee`
 
@@ -1625,7 +1625,7 @@ def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
     validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 ```
 
-This function initiates the procedure for a validator to exit, and is called by (i) `VoluntaryExit` processing, (ii) the code enforcing the "eject if under 16 ETH balance" rule, and (iii) slashing.
+This function initiates the procedure for a validator to exit and is called by (i) `VoluntaryExit` processing, (ii) the code enforcing the "eject if under 16 ETH balance" rule, and (iii) slashing.
 
 The code here enforces both (i) the "minimum 4 epoch delay rule" and (ii) the exit queue (in the case that too many validators are trying to exit at the same time). The implementation is as follows. Start off with the current epoch + 5 (the current epoch is already partially over so we need +5 to guarantee the delay is >=4 epochs). See if there are already too many validators exiting at that epoch; if there are not, then exit at that epoch, but if there are, instead try the next epoch. This creates a de-facto first-in-first-out queue for exits in the case of congestion.
 
@@ -1661,7 +1661,7 @@ Slashes a validator (ie. forcibly exits and penalizes the validator if they did 
 * Forcibly exits the validator
 * Sets the `slashed` flag of that validator to true
 * Sets a withdrawal delay of 4 eeks (as opposed to the normal ~1 day)
-* Increments the value in the desired position `state.slashings` array (this is one of those cyclically-rewriting arrays where in the i'th epoch position `i % EPOCHS_PER_SLASHINGS_VECTOR` gets rewritten). This array is used to track the total number of validators slashed, which is used to compute total slashing penalties (often called "anti-correlation penalties")
+* Increments the value in the desired position `state.slashings` array (this is one of those cyclically-rewriting arrays wherein the i'th epoch position `i % EPOCHS_PER_SLASHINGS_VECTOR` gets rewritten). This array is used to track the total number of validators slashed, which is used to compute total slashing penalties (often called "anti-correlation penalties")
 * Decreases their balance by the minimum penalty (1/32 of their balance)
 * Rewards whoever published the slashing
 * Rewards the block proposer for including the slashing
@@ -1733,7 +1733,7 @@ def is_valid_genesis_state(state: BeaconState) -> bool:
     return True
 ```
 
-*Note*: The `is_valid_genesis_state` function (including `MIN_GENESIS_TIME` and `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT`) is a placeholder for testing. It has yet to be finalized by the community, and can be updated as necessary.
+*Note*: The `is_valid_genesis_state` function (including `MIN_GENESIS_TIME` and `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT`) is a placeholder for testing. It has yet to be finalized by the community and can be updated as necessary.
 
 The idea here is that you can think of a client as repeatedly attempting to create a genesis state using the algorithm above, but only accepting the state when it satisfies the function above. In reality, clients will not work this way because it is too inefficient (better just track valid eth1 deposits and the timestamp from eth1, and activate when both hit the target). 
 
@@ -1746,7 +1746,7 @@ Let `genesis_block = BeaconBlock(state_root=hash_tree_root(genesis_state))`.
 
 Here, we finally get to defining the main function in the spec, which defines how the state is to be modified when a block is processed. The function also has the ability to declare that the block is invalid (this is typically done with either `assert`s, though anything that causes the code to throw an exception, eg. out-of-range list accessed, as well as uint64 overflow or underflow, counts as the block being invalid).
 
-We start off with a high-level definition, that breaks it up into two parts: (i) a per-slot state transition (`process_slots`) that takes place in each slot regardless of whether or not there was a block there, and (ii) a per-block state transition that takes the block as input. For example, if a block has slot 66 and its parent has slot 62, then the `process_slot` function would be called four all four slots in between (and `process_slot` would in turn call the epoch-boundary processing function `process_epoch`, because slot 64 is an epoch boundary, between epoch 1 [slots 32...63] and epoch 2 [slots 64...95]).
+We start off with a high-level definition, that breaks it up into two parts: (i) a per-slot state transition (`process_slots`) that takes place in each slot regardless of whether or not there was a block there, and (ii) a per-block state transition that takes the block as an input. For example, if a block has slot 66 and its parent has slot 62, then the `process_slot` function would be called four all four slots in between (and `process_slot` would, in turn, call the epoch-boundary processing function `process_epoch`, because slot 64 is an epoch boundary, between epoch 1 [slots 32...63] and epoch 2 [slots 64...95]).
 
 ### State transition
 
@@ -1804,9 +1804,9 @@ def process_slot(state: BeaconState) -> None:
     state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 ```
 
-The main function of the `process_slot` function is to update the historical `block_roots` and `state_roots` arrays. The state root manipulation is needed as a clever trick to get around a challenging issue. Namely, we want to include the root of the block at slot `n` into the history in slot `n`. The most natural time to do this is, well, when we are actually processing the block. But this poses a problem to the block creator: the post-state root of the block can only be generated after the state transition is fully processed, but including the block root into the history during slot `n` would require the block's post-state root to be known during the state transition!
+The main function of the `process_slot` function is to update the historical `block_roots` and `state_roots` arrays. The state root manipulation is needed as a clever trick to get around a challenging issue. Namely, we want to include the root of the block at slot `n` into the history in slot `n`. The most natural time to do this is, well, when we are processing the block. But this poses a problem to the block creator: the post-state root of the block can only be generated after the state transition is fully processed, but including the block root into the history during slot `n` would require the block's post-state root to be known during the state transition!
 
-We get around this via the following tactic. While processing the block at slot `n` (in `process_block`), we add the block header, but zero out the state root. Then, at the beginning of the `process_slot` function of slot N+1 (at which point the state has not yet been modified after it was processed in slot `n`), we edit the saved block header and fill in the post-state root.
+We get around this via the following tactic. While processing the block at slot `n` (in `process_block`), we add the block header but zero out the state root. Then, at the beginning of the `process_slot` function of slot N+1 (at which point the state has not yet been modified after it was processed in slot `n`), we edit the saved block header and fill in the post-state root.
 
 Note that this requires an extra data structure, `state.latest_block_header`, even though we only _really_ care about storing historical roots; the complexity increase here was deemed worth it to keep the state transition function itself a clean `state_transition(state, block) -> new_state` (as opposed to requiring the previous block as an explicit argument).
 
@@ -1853,7 +1853,7 @@ def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> Sequence
     ]
 ```
 
-Returns the subset of `PendingAttestation`s that have the correct head (ie. they voted for a head that ended up actually being the head of the chain).
+Returns the subset of `PendingAttestation`s that have the correct head (ie. they voted for a head that ended up being the head of the chain).
 
 ```python
 def get_unslashed_attesting_indices(state: BeaconState,
@@ -1946,7 +1946,7 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
     return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
 ```
 
-This is the reward that almost all other rewards in ethereum are computed as a multiple of. Particularly, note that it's a desired goal of the spec that `effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance)` is the average per-epoch reward received by a validator under theoretical best-case conditions; to achieve this, the base reward equals that amount divided by `BASE_REWARDS_PER_EPOCH`, which is the number of times that a reward of this size will be applied.
+This is the reward that almost all other rewards in Ethereum are computed as a multiple of. Particularly, note that it's a desired goal of the spec that `effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance)` is the average per-epoch reward received by a validator under theoretical best-case conditions; to achieve this, the base reward equals that amount divided by `BASE_REWARDS_PER_EPOCH`, which is the number of times that a reward of this size will be applied.
 
 ```python
 def get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex) -> Gwei:
@@ -2007,7 +2007,7 @@ def get_attestation_component_deltas(state: BeaconState,
     return rewards, penalties
 ```
 
-This is a helper function that outputs a list of rewards and penalties for validators; it is used for correct-source, correct-target and correct-head rewards. The general approach is: if portion `p` (eg. `p=0.9` for 90%) of validators achieve some property in their attestations, then those validators get a reward of `base_reward * p`, and the validators that did not achieve that property get a penalty of `base_reward`.
+This is a helper function that outputs a list of rewards and penalties for validators; it is used for correct-source, correct-target, and correct-head rewards. The general approach is: if portion `p` (eg. `p=0.9` for 90%) of validators achieve some property in their attestations, then those validators get a reward of `base_reward * p`, and the validators that did not achieve that property get a penalty of `base_reward`.
 
 We need penalties to ensure that validating is only net-profitable if you are online at least ~2/3 of the time (in reality the numbers are _slightly_ more forgiving than that, but not by much). We don't want validators that cannot meet that minimum level of liveness, as such validators would hurt more than they help by hindering finality (which requires 2/3 online).
 
@@ -2042,7 +2042,7 @@ def get_head_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence[Gwei]]
     return get_attestation_component_deltas(state, matching_head_attestations)
 ```
 
-The above three functions just use the `get_attestation_component_deltas` helper to compute rewards and penalties for correct FFG source, correct FFG target and correct head, respectively.
+The above three functions just use the `get_attestation_component_deltas` helper to compute rewards and penalties for correct FFG source, correct FFG target, and correct head, respectively.
 
 ```python
 def get_inclusion_delay_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence[Gwei]]:
@@ -2065,7 +2065,7 @@ def get_inclusion_delay_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequ
     return rewards, penalties
 ```
 
-This function processes rewards for getting your attestation included quickly: a full base reward if it gets included in the next slot, and `1/k` of a base reward if it gets included after `k` slots. This incentivizes promptness, reducing incentive to wait more than a slot to make sure you have the correct target or head.
+This function processes rewards for getting your attestation included quickly: a full base reward if it gets included in the next slot, and `1/k` of a base reward if it gets included after `k` slots. This incentivizes promptness, reducing the incentive to wait for more than a slot to make sure you have the correct target or head.
 
 ```python
 def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence[Gwei]]:
@@ -2117,7 +2117,7 @@ def get_attestation_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence
     return rewards, penalties
 ```
 
-This function combines together rewards and penalties from all of the above sources into the total rewards and penalties.
+This function combines rewards and penalties from all of the above sources into the total rewards and penalties.
 
 ##### `process_rewards_and_penalties`
 
@@ -2132,7 +2132,7 @@ def process_rewards_and_penalties(state: BeaconState) -> None:
         decrease_balance(state, ValidatorIndex(index), penalties[index])
 ```
 
-This function combines all of the above logic together, and actually processes these rewards and penalties.
+This function combines all of the above logic and processes these rewards and penalties.
 
 #### Registry updates
 
@@ -2171,10 +2171,10 @@ Note that if two conflicting blocks _do_ get finalized, the first time that happ
 In eth2, **anti-correlation penalties** are penalties structured in such a way that you get penalized more for the same offense if many other validators perform that same offense at the same time. Anti-correlation penalties are done for a few reasons:
 
 1. It's generally a good economic principle to set the penalty for an action to be proportional to the harm caused by an action, and because of eth2's inherent decentralization, a single validator misbehaving often causes no harm to network performance at all, but a large fraction of validators misbehaving simultaneously can cause serious damage.
-2. This technique tries to separate out the case where a validator misbehaves due to an honest mistake (internet connection failure, two validator backups accidentally interfering with each other, etc) from the case where validators are trying to actively attack the network. Honest mistakes are only lightly punished, malice is punished to the maximum extent.
+2. This technique tries to separate the case where a validator misbehaves due to an honest mistake (internet connection failure, two validator backups accidentally interfering with each other, etc) from the case where validators are trying to actively attack the network. Honest mistakes are only lightly punished, malice is punished to the maximum extent.
 3. It creates incentives for validators to make decisions that decorrelate their failures from other validators; for example: not running the same client, not being part of the same staking pool, not running on the same cloud service.
 
-We can see one example how (3) works by considering a scenario where there are two staking pools (or cloud services, or clients), one with 10% of total stake and the other with 20% of total stake. Suppose that the two have the same reliability; that is, each of them has the same chance of failing in any given time period. However, because of anti-correlation penalties, the second pool would suffer penalties twice as high, because the fact that 20% of validators fail instead of 10% itself doubles the penalties for each validator. Hence, for a new user it becomes less risky to join the first pool.
+We can see one example of how (3) works by considering a scenario where there are two staking pools (or cloud services, or clients), one with 10% of the total stake and the other with 20% of the total stake. Suppose that the two have the same reliability; that is, each of them has the same chance of failing in any given time period. However, because of anti-correlation penalties, the second pool would suffer penalties twice as high, because the fact that 20% of validators fail instead of 10% itself doubles the penalties for each validator. Hence, for a new user, it becomes less risky to join the first pool.
 
 There are two main types of anti-correlation penalties in eth2:
 
@@ -2244,7 +2244,7 @@ This function does a few miscellaneous operations, particularly:
 
 ### Block processing
 
-This next section, finally, deals with the procedure for processing a block itself. This part is actually surprisingly not-that-complicated; the bulk of the complexity is in either the helpers or in end-of-epoch processing.
+This next section, finally, deals with the procedure for processing a block itself. This part is surprisingly not-that-complicated; the bulk of the complexity is in either the helpers or in end-of-epoch processing.
 
 ```python
 def process_block(state: BeaconState, block: BeaconBlock) -> None:
@@ -2334,7 +2334,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     for_ops(body.voluntary_exits, process_voluntary_exit)
 ```
 
-Basically, for each type of operation in the block, run its associated function. Also verify that the maximum possible number of deposits is included. Note that there are maximums on all operation types, though they do not need to be explicitly enforced here because they are already included in the [beacon block body SSZ data type](#BeaconBlockBody).
+Basically, for each type of operation in the block, run its associated function. Also, verify that the maximum possible number of deposits is included. Note that there are maximums on all operation types, though they do not need to be explicitly enforced here because they are already included in the [beacon block body SSZ data type](#BeaconBlockBody).
 
 ##### Proposer slashings
 
@@ -2386,7 +2386,7 @@ Given two attestations (contained in an `AttesterSlashing`):
 
 * Verifies that the two attestations conflict (ie. they trigger the Casper FFG slashing rules)
 * Verifies both attestations are correct
-* Computes the intersection of the participant sets of the two attestations. Verifies that the intersection is nonempty, and slashes anyone in the intersection.
+* Computes the intersection of the participant sets of the two attestations. Verifies that the intersection is non-empty, and slashes anyone in the intersection.
 
 ##### Attestations
 
@@ -2419,7 +2419,7 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 ```
 
-In order to ensure the chain actually finalizes, we force attesters to (i) use the latest justified block as their source, and (ii) use the correct epoch for their target (though possibly the wrong block, as the target block may not be stabilized as part of the chain yet). We do some basic sanity-checking (the attestation is not from the future, and the attestation committee index is not >= the number of committees in that slot). We then verify the attestation, and save it as a `PendingAttestation`, leaving more detailed processing of all attestations until the end of the epoch.
+To ensure the chain finalizes, we force attesters to (i) use the latest justified block as their source, and (ii) use the correct epoch for their target (though possibly the wrong block, as the target block may not be stabilized as part of the chain yet). We do some basic sanity-checking (the attestation is not from the future, and the attestation committee index is not >= the number of committees in that slot). We then verify the attestation, and save it as a `PendingAttestation`, leaving more detailed processing of all attestations until the end of the epoch.
 
 ##### Deposits
 
@@ -2479,9 +2479,9 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
         increase_balance(state, index, amount)
 ```
 
-Processes a deposit; this includes (i) verifying the Merkle branch, proving the deposit is actually part of the deposit tree created by the eth1 deposit contract, (ii) verifying that deposits are being processed in order, (iii) verify the signature on the deposit, and finally (iv) adding it to the validator set. If the deposit pubkey is already in the validator set, the deposit is instead treated as a balance top-up.
+Processes a deposit; this includes (i) verifying the Merkle branch, proving the deposit is part of the deposit tree created by the eth1 deposit contract, (ii) verifying that deposits are being processed in order, (iii) verify the signature on the deposit, and finally (iv) adding it to the validator set. If the deposit pubkey is already in the validator set, the deposit is instead treated as a balance top-up.
 
-(Note: yes, balance top-ups do _kinda_ get around activation queues, but note that for an attacker to benefit from this, they need to have already lost the ETH that is being topped up [since depositing requires 32 ETH and 32 ETH is the maximum effective balance], so it is not actually an attack vector)
+(Note: yes, balance top-ups do _kinda_ get around activation queues, but note that for an attacker to benefit from this, they need to have already lost the ETH that is being topped up [since depositing requires 32 ETH and 32 ETH is the maximum effective balance], so it is not an attack vector)
 
 ##### Voluntary exits
 
@@ -2505,6 +2505,6 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     initiate_validator_exit(state, voluntary_exit.validator_index)
 ```
 
-Validators can voluntarily sign a message that can be included on chain to exit the validator set. Note that there is a minimum active period of ~1 day before a validator can exit; this prevents validators from repeatedly depositing and withdrawing to try to get onto a particular shard committee, as well as polluting the deposit/withdraw queue in general.
+Validators can voluntarily sign a message that can be included on-chain to exit the validator set. Note that there is a minimum active period of ~1 day before a validator can exit; this prevents validators from repeatedly depositing and withdrawing to try to get onto a particular shard committee, as well as polluting the deposit/withdraw queue in general.
 
 The minimum epoch rule (`assert get_current_epoch(state) >= voluntary_exit.epoch`) is introduced to ensure that an attacker building a hidden attack chain cannot replay exits on that attack chain at an earlier point in history and use this to help avoid inactivity leaks or more quickly reach finality.

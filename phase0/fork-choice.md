@@ -51,7 +51,7 @@ The fork choice rule can be viewed as being part of the **consensus algorithm**,
 * See here for the original paper describing Casper FFG: https://arxiv.org/abs/1710.09437
 * See here for a description of LMD GHOST (ignore the section on detecting finality, as that is specific to Casper CBC, whereas the fork choice rule is shared between CBC and FFG): https://vitalik.ca/general/2018/12/05/cbc_casper.html
 
-The goal of Casper FFG and LMD GHOST is to combine together the benefits of two major types of PoS design: **longest-chain-based** (or Nakamoto-based), as used by Peercoin, NXT, [Ouroboros](https://cardano.org/ouroboros/) and many other designs, and **traditional BFT based**, as used by [Tendermint](https://tendermint.com/docs/introduction/what-is-tendermint.html) and others. Longest chain systems have the benefit that they are low-overhead, even with a very high number of participants. Traditional BFT systems have the key benefit that they have a concept of **finality**: once a block is **finalized**, it can no longer be reverted, no matter what other participants in the network do. If >1/3 of participants in the network behave maliciously, different nodes could be tricked into accepting different conflicting blocks as finalized. However, to cause such a situation, those participants would have to misbehave in a very unambiguous and provable way, allowing them to be **slashed** (all their coins taken away as a penalty), making attacks extremely expensive. Additionally, traditional BFT systems reach finality quickly, though at the cost of high overhead and a low maximum participant count.
+The goal of Casper FFG and LMD GHOST is to combine together the benefits of two major types of PoS design: **longest-chain-based** (or Nakamoto-based), as used by Peercoin, NXT, [Ouroboros](https://cardano.org/ouroboros/) and many other designs, and **traditional BFT based**, as used by [Tendermint](https://tendermint.com/docs/introduction/what-is-tendermint.html) and others. Longest chain systems have the benefit that they are low-overhead, even with a very high number of participants. Traditional BFT systems have the key benefit that they have a concept of **finality**: once a block is **finalized**, it can no longer be reverted, no matter what other participants in the network do. If >1/3 of participants in the network behave maliciously, different nodes could be tricked into accepting different conflicting blocks as finalized. However, to cause such a situation, those participants would have to misbehave in a very unambiguous and provable way, allowing them to be **slashed** (all their coins are taken away as a penalty), making attacks extremely expensive. Additionally, traditional BFT systems reach finality quickly, though at the cost of high overhead and a low maximum participant count.
 
 Eth2 combines together the advantages of both. It includes a traditional-BFT-inspired finality system (Casper FFG), though running at a rate of ~13 minutes per cycle (note: time to finality = 2 epochs = 2 * 32 * 12 sec) instead of a few seconds per cycle, allowing potentially over a million participants. To progress the chain between these epochs, LMD GHOST is used.
 
@@ -59,13 +59,13 @@ Eth2 combines together the advantages of both. It includes a traditional-BFT-ins
 
 The core idea of LMD GHOST is that at each fork, instead of choosing the side that contains a longer chain, we choose the side that has more total support from validators, counting only the most recent message of each validator as support. This is heavily inspired by [Zohar and Sompolinsky's original GHOST paper](https://eprint.iacr.org/2013/881), but it adapts the design from its original PoW context to our new PoS context. LMD GHOST is powerful because it easily generalizes to much more than one "vote" being sent in parallel.
 
-This is a very valuable feature for us, because Casper FFG [already requires every validator](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#how-does-eth2-proof-of-stake-work) to send one attestation per epoch, meaning that hundreds of attestations are already being sent every second. We piggyback on those messages and ask them to include additional information voting on the current head of the chain. The result of this is that when a block is published, within seconds there are hundreds of signed messages from validators (**attestations**) confirming the block, and after even one slot (12 seconds) it's very difficult to revert a block. Anyone seeking even stronger ironclad confirmation can simply wait for finality after two epochs (~12 minutes).
+This is a very valuable feature for us because Casper FFG [already requires every validator](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#how-does-eth2-proof-of-stake-work) to send one attestation per epoch, meaning that hundreds of attestations are already being sent every second. We piggyback on those messages and ask them to include additional information voting on the current head of the chain. The result of this is that when a block is published, within seconds there are hundreds of signed messages from validators (**attestations**) confirming the block, and after even one slot (12 seconds) it's very difficult to revert a block. Anyone seeking even stronger ironclad confirmation can simply wait for finality after two epochs (~12 minutes).
 
 The approximate approach that we take to combining Casper FFG and LMD GHOST is:
 
 1. Use the Casper FFG rules to compute finalized blocks. If a block becomes finalized, all future canonical chains must pass through this block.
 2. Use the Casper FFG rules to keep track of the **latest justified checkpoint** (LJC) that is a descendant of the latest accepted finalized checkpoint.
-3. Use the LMD GHOST rules, starting from the LJC as a root, to compute the chain head.
+3. Use the LMD GHOST rules, starting from the LJC as root, to compute the chain head.
 
 This combination of steps, particularly rule (2), is implemented to ensure that new blocks that validators create by following the rules actually will continually finalize new blocks with Casper FFG, even if temporary exceptional situations (eg. involving attacks or extremely high network latency) take place.
 
@@ -81,7 +81,7 @@ But to approach a more realistic picture we need to account for an important sce
 
 ![](../images/checkpoint_tree_2.png)
 
-In any case where there is divergence between multiple chains, skipped slots will be frequent, because proposer selection and slashing rules forbid multiple blocks from being created in the same slot (unless two chains diverge for more than four epochs)! Note also that if we want to compute the _post-state_ of a checkpoint, we would have to run [the `process_slots` function](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#state-transition) up to the first slot of the epoch to process the empty slots.
+In any case, where there is a divergence between multiple chains, skipped slots will be frequent because proposer selection and slashing rules forbid multiple blocks from being created in the same slot (unless two chains diverge for more than four epochs)! Note also that if we want to compute the _post-state_ of a checkpoint, we would have to run [the `process_slots` function](https://github.com/ethereum/annotated-spec/blob/master/beacon-chain.md#state-transition) up to the first slot of the epoch to process the empty slots.
 
 Another important edge case is when there is more than an entire epoch of skipped slots. To cover this edge case, we think about a checkpoint as a (block, slot) pair, not a blocks; this means that the same block could be part of multiple checkpoints that an attestation could validly reference:
 
@@ -97,7 +97,7 @@ Now, let's go through the specification...
 
 ## Fork choice
 
-One important thing to note is that the fork choice _is not a pure function_; that is, what you accept as a canonical chain does not depend just on what data you also have, but also when you received it. The main reason this is done is to enforce finality: if you accept a block as finalized, then you will never revert it, even if you later see a conflicting block as finalized. Such a situation would only happen in cases where there is an active >1/3 attack on the chain; in such cases, we expect extra-protocol measures to be required to get all clients back on the same chain. There are also other deviations from purity, particularly a "sticky" choice of latest justified block, where the latest justified block can only change near the beginning of an epoch; this is done to prevent certain kinds of "bouncing attacks".
+One important thing to note is that the fork choice _is not a pure function_; that is, what you accept as a canonical chain does not depend just on what data you also have, but also when you received it. The main reason this is done is to enforce finality: if you accept a block as finalized, then you will never revert it, even if you later see a conflicting block as finalized. Such a situation would only happen in cases where there is an active >1/3 attack on the chain; in such cases, we expect extra-protocol measures to be required to get all clients back on the same chain. There are also other deviations from purity, particularly a "sticky" choice of the latest justified block, where the latest justified block can only change near the beginning of an epoch; this is done to prevent certain kinds of "bouncing attacks".
 
 We implement this fork choice by defining a `store` that contains received fork-choice-relevant information, as well as some "memory variables", and a function `get_head(store)`.
 
@@ -154,7 +154,7 @@ class Store(object):
     latest_messages: Dict[ValidatorIndex, LatestMessage] = field(default_factory=dict)
 ```
 
-The members variables here are as follows:
+The member variables here are as follows:
 
 * `time`: the current time
 * `genesis_time`: the time of the genesis block of the chain
@@ -166,7 +166,7 @@ The members variables here are as follows:
 * `checkpoint_states`: the post-state of every checkpoint. This could be different from the post-state of the block referenced by the checkpoint in the case where there are skipped slots; one would need to run the state transition function through the empty slots to get to the end-of-epoch state. Note particularly the extreme case where there is more than an entire epoch of skipped slots between a block and its child, so there are _multiple_ checkpoints referring to that block, with different epoch numbers and different states.
 * `latest_messages`: the latest epoch and block voted for by each validator.
 
-Note that in reality, instead of storing the post-states of all blocks and checkpoints that they know about, clients may simply store only the latest state, opting to reprocess blocks or process a saved journal of state changes if they want to process older blocks. This sacrifices computing efficiency in exceptional cases, but saves greatly on storage.
+Note that in reality, instead of storing the post-states of all blocks and checkpoints that they know about, clients may simply store only the latest state, opting to reprocess blocks or process a saved journal of state changes if they want to process older blocks. This sacrifices computing efficiency in exceptional cases but saves greatly on storage.
 
 #### `get_forkchoice_store`
 
@@ -253,7 +253,7 @@ Get the total ETH attesting to a given block or its descendants, considering onl
 
 ![](https://vitalik.ca/files/posts_files/cbc-casper-files/Chain7.png)
 
-In this diagram, we assume that each of the last five block proposals (the blue ones) carries one attestation, which specifies that block as the head, and we assume each block is created by a different validator, and all validators have the same deposit size. The number in each square represents the latest attesting balance of that block. In eth2, blocks and attestations are separate, and there will be hundreds of attestations supporting each block, but otherwise the principle is the same.
+In this diagram, we assume that each of the last five block proposals (the blue ones) carries one attestation, which specifies that block as the head, and we assume each block is created by a different validator, and all validators have the same deposit size. The number in each square represents the latest attesting balance of that block. In eth2, blocks and attestations are separate, and there will be hundreds of attestations supporting each block, but otherwise, the principle is the same.
 
 #### `filter_block_tree`
 
@@ -350,7 +350,7 @@ This follows the following procedure:
 1. Get the latest justified block hash, call it `B` (this is implicit in `get_filtered_block_tree`)
 2. Get the subtree of blocks rooted in `B` (done by `get_filtered_block_tree`)
 3. Filter that for blocks whose slot exceeds the slot of `B` (technically, this check is no longer necessary ever since (2) was introduced so may be removed)
-4. Walk down the tree, at each step where a block has multiple children selecting the child with the stronger support (ie. higher `get_latest_attesting_balance`)
+4. Walk down the tree, at each step where a block has multiple children selecting the child with the strongest support (ie. higher `get_latest_attesting_balance`)
 
 From here on below, we have the functions for _updating_ the `store`.
 
@@ -377,12 +377,12 @@ def should_update_justified_checkpoint(store: Store, new_justified_checkpoint: C
 
 The idea here is that we want to only change the last-justified-block within the first 1/3 of an epoch. This prevents "bouncing attacks" of the following form:
 
-1. Start from a scenario where in epoch N, 62% of validators support block A, and in epoch N+1, 62% of validators support block B. Suppose that the attacker has 5% of total stake. This scenario requires very exceptional networking conditions to get into; the point of the attack, however, is that if we get into such a scenario the attacker could perpetuate it, permanently preventing finality.
-2. Due to LMD GHOST, B is favored, and so validators are continuing to vote for B. However, the attacker suddenly publishes attestations worth 5% of total stake tagged with epoch N for block A, causing A to get justified.
-3. In epoch N+2, A is justified and so validators are attesting to A', a descendant of A. When A' gets to 62% support, the attacker publishes attestations worth 5% of total stake for B. Now B is justified, and favored by the fork choice.
-4. In epoch N+3, B is justified, and so validators are attesting to B', a descendant of B. When B' gets to 62% support, the attacker publishes attestations worth 5% of total stake for A'....
+1. Start from a scenario wherein epoch N, 62% of validators support block A, and in epoch N+1, 62% of validators support block B. Suppose that the attacker has 5% of the total stake. This scenario requires very exceptional networking conditions to get into; the point of the attack, however, is that if we get into such a scenario the attacker could perpetuate it, permanently preventing finality.
+2. Due to LMD GHOST, B is favored, and so validators are continuing to vote for B. However, the attacker suddenly publishes attestations worth 5% of the total stake tagged with epoch N for block A, causing A to get justified.
+3. In epoch N+2, A is justified and so validators are attesting to A', a descendant of A. When A' gets to 62% support, the attacker publishes attestations worth 5% of total stake for B. Now B is justified and favored by the fork choice.
+4. In epoch N+3, B is justified, and so validators are attesting to B', a descendant of B. When B' gets to 62% support, the attacker publishes attestations worth 5% of total stake for A'...
 
-This could continue forever, bouncing permanently between the two chains preventing any new block from being finalized. This attack can happen because the combined use of LMD GHOST and Casper FFG creates a discontinuity, where a small shift in support for a block can outweigh a large amount of support for another block, if that small shift pushes it past the 2/3 threshold needed for justification. We block the attack by only allowing the latest justified block to change near the beginning of an epoch; this way, there is a full 2/3 of an epoch during which honest validators agree on the head and have the opportunity to justify a block and thereby further cement it, at the same time causing the LMD GHOST rule to strongly favor that head. This sets up that block to most likely be finalized in the next epoch.
+This could continue forever, bouncing permanently between the two chains preventing any new block from being finalized. This attack can happen because the combined use of LMD GHOST and Casper FFG creates a discontinuity, where a small shift in support for a block can outweigh a large amount of support for another block if that small shift pushes it past the 2/3 threshold needed for justification. We block the attack by only allowing the latest justified block to change near the beginning of an epoch; this way, there is a full 2/3 of an epoch during which honest validators agree on the head and have the opportunity to justify a block and thereby further cement it, at the same time causing the LMD GHOST rule to strongly favor that head. This sets up that block to most likely be finalized in the next epoch.
 
 See [Ryuya Nakamura's ethresear.ch post](https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114) for more discussion.
 
@@ -528,16 +528,16 @@ def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
                 store.justified_checkpoint = state.current_justified_checkpoint
 ```
 
-Upon receiving a block, first do a few checks:
+Upon receiving a block, first, do a few checks:
 
 1. Check that we know about the block's parent (if we don't, we can temporarily save the block in case we find the parent later)
 2. Check that the block is not from a slot that is still in the future (if it is, we can pretend to not hear about the block until time progresses to the point that the block is no longer from the future)
-3. Check that the block slot is later than the last finalized block's slot, and that the block is a descendant of the last finalized block (an optimization to reduce unnecessary work from blocks that can clearly no longer possibly become canonical)
+3. Check that the block slot is later than the last finalized block's slot and that the block is a descendant of the last finalized block (an optimization to reduce unnecessary work from blocks that can clearly no longer possibly become canonical)
 4. Check that the block's post-state root is correct and the state transition passes
 
 We then add the block to the DB. We also update the justified and finalized checkpoints. The idea is that if the justified checkpoint known by the received block has a higher epoch number than the justified checkpoint we know about, we accept that justified checkpoint. If we are [in the first 1/3](#should_update_justified_checkpoint) of an epoch, we accept it immediately, otherwise, we put it in `store.best_justified_checkpoint` so it can be updated into `store.justified_checkpoint` [at the end](#on_tick) of the epoch.
 
-If the received block knows about a finalized checkpoint with a higher epoch number than what we know about, we accept it, and we also immediately update the justified checkpoint if either (i) the justified checkpoint provided in the block is more recent than the one we know about, or (ii) the one we know about is not compatible with the new finalized block. Note that there is a theoretical possibility that condition (ii) causes the justified checkpoint to go backwards (change from a later epoch to an earlier epoch), but for this to happen, there would need to be a finalized block B with a justified child B', with a justified block A' on a conflicting chain pointing to some earlier finalized block A, which implies a slashable 1/3 attack due to the no-surround rule. In such a case, anyone who referenced A' as an LJB may not be able to build on top of B', so some validators who participated on the "wrong chain" may need to suffer some level of inactivity leak.
+If the received block knows about a finalized checkpoint with a higher epoch number than what we know about, we accept it, and we also immediately update the justified checkpoint if either (i) the justified checkpoint provided in the block is more recent than the one we know about, or (ii) the one we know about is not compatible with the new finalized block. Note that there is a theoretical possibility that condition (ii) causes the justified checkpoint to go backward (change from a later epoch to an earlier epoch), but for this to happen, there would need to be a finalized block B with a justified child B', with a justified block A' on a conflicting chain pointing to some earlier finalized block A, which implies a slashable 1/3 attack due to the no-surround rule. In such a case, anyone who referenced A' as an LJB may not be able to build on top of B', so some validators who participated in the "wrong chain" may need to suffer some level of inactivity leak.
 
 #### `on_attestation`
 
