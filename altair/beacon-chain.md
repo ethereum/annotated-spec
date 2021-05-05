@@ -77,7 +77,7 @@ Altair is the first hard fork of the Ethereum beacon chain. Its main features ar
 | - | - | - |
 | `ParticipationFlags` | `uint8` | a succinct representation of 8 boolean participation flags |
 
-We will maintain a byte array to store which actions a validator has successfully taken during a given epoch. Each validator gets 8 bits: 3 for each of their **duties** (attesting to the correct Casper FFG source, to the correct Casper FFG target, and to the correct head), and 5 not-yet-claimed to be used for duties to be added in the future.
+We will maintain a byte array to store which actions a validator has successfully taken during a given epoch, so that we can calculate finality and other global statistics and reward or penalize validators at the end of the epoch. Each validator gets 8 bits: 3 for each of their **attestation duties** (attesting to the correct Casper FFG source, to the correct Casper FFG target, and to the correct head), and 5 not-yet-used bits to be used for duties to be added in the future.
 
 ## Constants
 
