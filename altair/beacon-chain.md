@@ -71,6 +71,28 @@ Altair is the first hard fork of the Ethereum beacon chain. Its main features ar
     * Bug fixes to reward accounting (eg. giving proposers a ~1/8 share of _all_ rewards instead of just a ~1/8 share of one small piece of rewards, and ensuring that the rewards under perfect performance actually do add up to the full base reward)
 * **Penalty parameter updates**, making both inactivity leaks and slashing somewhat more punitive than pre-Altair, though still less punitive than their eventually-intended values.
 
+### Aside: validator duties, rewards and penalties
+
+One of the main conceptual reworks of Altair is redesigning how validators are rewarded and penalized to make these incentives more systematic and easy to reason about. Validators are rewarded for fulfilling **duties** - tasks that they are assigned as part of the job of being a validators. These duties come in two types: (i) **attestation duties**, duties to make an attestation in every epoch that gets included quickly and attests to the correct chain, and (ii) **non-attestation duties**, tasks that are not connected to attesting and that any individual validator gets assigned to more rarely. In Altair, the complete list of duties is:
+
+* **`TIMELY_HEAD`**: submit an attestation that correctly identifies the head of the chain, and gets included on chain in the next slot
+* **`TIMELY_TARGET`**: submit an attestation that correctly identifies the Casper FFG target, and gets included within `sqrt(EPOCH_LENGTH)` slots
+* **`TIMELY_SOURCE`**: submit an attestation that correctly identifies the Casper FFG source, and gets included within `EPOCH_LENGTH` slots
+* **Sync committee participation**: if you are part of a sync committee, submit the sync committee signature
+* **Proposing**: propose a block if you are assigned to do so
+
+The total theoretical long-run average reward per epoch that a validator can get is determined by the [`get_base_reward`](#get_base_reward) function. Note that this is the maximum long-run average, _not_ the maximum reward in any given epoch. In particular, rewards for submitting sync committee signatures and for proposing are typically much larger than the `get_base_reward`, but any given validator is only assigned these tasks infrequently, and so the average per-epoch reward going to a validator who fulfills these tasks is only a fraction of the base reward.
+
+The base reward is then split up into pieces that are allocated to these duties:
+
+
+
+Each piece is represented as a fraction `X / WEIGHT_DENOMINATOR`, where `WEIGHT_DENOMINATOR = 64`.
+
+Note that if a duty is assigned a `X / WEIGHT_DENOMINATOR` share of the pie, that does not necessarily mean that a validator who fulfills that duty is guaranteed to get exactly that fraction times the base reward in rewards. The attestation rewards are proportional to the percentage of validators who fulfill the duty (eg. if only 80% of validators fulfill the duty then the reward for each validator that does is multiplied by 0.8); this rule was added to discourage censorship and inter-validator attacks. A validator may be prevented from getting some sync committee rewards through no fault of their own if other proposers misbehave or are missing, and proposer rewards are dependent on what messages the proposer includes, which are in turn dependent on what other validators publish. However, in a well-functioning network, rewards should get quite close to these theoretical maximums.
+
+Note also that there is one reward that falls outside this scheme: slashing whistleblower rewards. These rewards fall outside the duties scheme because they are irregular (we don't know ahead of time how many slashings there will be), and they don't contribute to issuance (because the slashing whistleblower reward is counterbalanced by a much larger slashing penalty suffered by whoever was slashed).
+
 ## Custom types
 
 | Name | SSZ equivalent | Description |
