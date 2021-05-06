@@ -150,6 +150,16 @@ This patch updates a few configuration values to move penalty parameters closer 
 * The minimum slashing penalty quotient is decreased from 128 to 64. This quotient is the minimum fraction of your total balance that a slashed validator will lose, so this change increases the minimum slashing penalty from 0.25 ETH to 0.5 ETH
 * The proportional slashing multiplier is increased from 1 to 2, meaning that the slashing penalty will now be _double_ the percentage of other validators that were slashed within 18 days of that validator. For example, if you are slashed and within 18 days [in both directions] 7% of other validators are also slashed, pre-Altair your slashing penalty would have been 7%, post-Altair it would be 14%.
 
+### Aside: sync committees
+
+The **sync committee** is the "flagship feature" of the Altair hard fork. This is a committee of 512 validators that is randomly selected every **sync committee period (~2 days)**, and is assigned to continually sign the block header that is the new head of the chain at each slot. This allows light clients to keep track of the chain of beacon block headers: if they have a beacon block header, they can use a Merkle branch to verify the sync committee for that period and the next period, and then they can authenticate newer beacon block headers by verifying **sync committee signatures** of those headers.
+
+![](lightsync.png)
+
+_The above diagram shows the procedure to validate a block header in sync committee period X+1 knowing a block header in sync committee period X. The sync committee aggregate signature of the newer header can be downloaded from the p2p network; it can be verified against the public keys in the sync committee that is part of the Merkle state tree of the older header._
+
+The minimum cost for light clients to track the chain is only about 25 kB per two days. Whenever a new sync committee period begins, a light client needs to download and verify a beacon block header that was produced during the new sync committee period (along with a sync committee signature of it). They need to then download a Merkle branch and the next sync committee of that beacon block header (512 48-byte public keys, the bulk of the data cost), and authenticate the Merkle branch. Having done this, the light client is now equipped to validate the sync committee signatures of any block header within the next two sync committee periods. Of course, closely following the chain does require more data bandwidth.
+
 ### Misc
 
 | Name | Value |
@@ -157,7 +167,7 @@ This patch updates a few configuration values to move penalty parameters closer 
 | `SYNC_COMMITTEE_SIZE` | `uint64(2**10)` (= 1,024) |
 | `SYNC_PUBKEYS_PER_AGGREGATE` | `uint64(2**6)` (= 64) |
 
-The **sync committee** is the "flagship feature" of the Altair hard fork. This is a committee of 512 validators that is randomly selected every ~2 days, and is assigned to sign the most recent block header. The public keys of the current and next sync committee are committed to in the beacon state. This allows light clients to keep track of the chain of beacon block headers, use the sync committee signatures to verify new block headers, and use the Merkle paths from beacon block headers to validate new sync committees. The minimum cost for light clients is a mere `512 * 48 = 24576` bytes per two days (plus another few hundred bytes for a Merkle branch and a single block header), though closely following the chain does of course require downloading and checking headers more frequently.
+The sync committee is set to 512 validators, a relatively large and conservative size (compared to attestation and later shard proposal committees) to ensure safety.
 
 | `INACTIVITY_SCORE_BIAS` | `uint64(4)` |
 | - | - |
@@ -423,13 +433,17 @@ def get_unslashed_participating_indices(state: BeaconState, flag_index: int, epo
     return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
 ```
 
-A major feature of Altair is reforming how we keep track of which validators fulfilled which duties during an epoch so we can reward them and compute finality. The intuitively cleanest approach, simply giving validators their reward and tracking progress toward finality in real time, has three key problems:
+A major feature of Altair is reforming how we keep track of which validators fulfilled which duties during an epoch so we can reward them and compute finality.
+
+Note that there are many subtle considerations in doing this correctly. The easiest approach to solve this problem that a naive observer might think of is to simply give validators their reward and tracking progress toward finality immediately. However, this suffers from three key problems:
 
 1. It does not prevent validators from getting their attestations included twice (preventing that would require some kind of bitfield _anyway_)
 2. It does not have an easy path to allow rewards to be proportional to total participation levels (a feature that we want to keep to discourage censorship and inter-validator attacks)
 3. It would require random-access updates to validator balances, which are expensive. This is because a random-access update requires re-computing a Merkle branch, or up to 22 hashes per validator per epoch. Updating balances at the end of an epoch in a batch, on the other hand, simply re-computes the entire balance tree, costing ~1/4 hashes per validator per epoch (each balance is 8 bytes, a chunk is 32 bytes, an N-chunk Merkle tree requires N-1 hashes to recompute)
 
-The pre-Altair approach was to store `PendingAttestation` objects, effectively keeping the attestations received during an epoch in the state (and adding information about when they were received to keep track of timeliness) and then processing them all at once at the end of the epoch. The Altair approach is more efficient: it stores a bitfield (1 byte per active validator) and updates the bitfield in real time. We avoid random-access updates because the bitfield is stored _in shuffled order_, meaning that the `ParticipationFlags` of the validators in the same committee are stored beside each other. This ensures the real-time cost of updating this bitfield is only ~1/32 hashes per validator (slightly more if there are two attestations for the same committee, but never too much more).
+The pre-Altair approach to solve these problems was to avoid doing any attestation processing (except signature verification) immediately and instead store `PendingAttestation` objects, keeping the important data in the attestations received during an epoch in the state (and adding information about when they were received to keep track of timeliness). These `PendingAttestation` objects would be processed all at once at the end of the epoch.
+
+The Altair approach is more efficient: it stores a bitfield (1 byte per active validator) and updates the bitfield immediately when a validator fulfills a duty. We avoid the issues with random-access updates that would arise if we had immediately updated _balances_ because in the Altair approach the bitfield is stored _in shuffled order_. That is, the `ParticipationFlags` of the validators in the same committee are stored beside each other. This ensures the real-time cost of updating this bitfield is only ~1/32 hashes per validator (slightly more if there are two attestations for the same committee, but never too much more).
 
 #### `get_flag_index_deltas`
 
