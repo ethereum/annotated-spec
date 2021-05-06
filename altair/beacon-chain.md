@@ -83,15 +83,15 @@ One of the main conceptual reworks of Altair is redesigning how validators are r
 
 The total theoretical long-run average reward per epoch that a validator can get is determined by the [`get_base_reward`](#get_base_reward) function. Note that this is the maximum long-run average, _not_ the maximum reward in any given epoch. In particular, rewards for submitting sync committee signatures and for proposing are typically much larger than the `get_base_reward`, but any given validator is only assigned these tasks infrequently, and so the average per-epoch reward going to a validator who fulfills these tasks is only a fraction of the base reward.
 
-The base reward is then split up into pieces that are allocated to these duties:
+The base reward is split up into pieces where each piece is allocated to one of these duties:
 
+![](duties.png)
 
+Each piece is represented as a fraction `X / WEIGHT_DENOMINATOR`, where `WEIGHT_DENOMINATOR = 64`; the `X` values for the various pieces sum up to 64, making up a full base reward.
 
-Each piece is represented as a fraction `X / WEIGHT_DENOMINATOR`, where `WEIGHT_DENOMINATOR = 64`.
+Note that if a duty is assigned a `X / WEIGHT_DENOMINATOR` share of the pie, that does not necessarily mean that a validator who fulfills that duty is guaranteed to get exactly that fraction times the base reward. The reward that a validator gets for fulfilling an attestation duty is proportional to the percentage of all validators who fulfill that duty (eg. if only 80% of validators fulfill the duty then the reward for each validator that does is multiplied by 0.8); this rule was added to discourage censorship and inter-validator attacks. A validator only gets sync committee rewards if their signature is included in the next beacon block, which may fail to happen either due to the sync committee member's own negligence or due to the negligence of the next proposer. Proposers are rewarded for including other messages, so proposers may lose some rewards from those messages not being published. However, in a well-functioning network, rewards for most participants for all duties should get quite close to the theoretical maximums.
 
-Note that if a duty is assigned a `X / WEIGHT_DENOMINATOR` share of the pie, that does not necessarily mean that a validator who fulfills that duty is guaranteed to get exactly that fraction times the base reward in rewards. The attestation rewards are proportional to the percentage of validators who fulfill the duty (eg. if only 80% of validators fulfill the duty then the reward for each validator that does is multiplied by 0.8); this rule was added to discourage censorship and inter-validator attacks. A validator may be prevented from getting some sync committee rewards through no fault of their own if other proposers misbehave or are missing, and proposer rewards are dependent on what messages the proposer includes, which are in turn dependent on what other validators publish. However, in a well-functioning network, rewards should get quite close to these theoretical maximums.
-
-Note also that there is one reward that falls outside this scheme: slashing whistleblower rewards. These rewards fall outside the duties scheme because they are irregular (we don't know ahead of time how many slashings there will be), and they don't contribute to issuance (because the slashing whistleblower reward is counterbalanced by a much larger slashing penalty suffered by whoever was slashed).
+There is one reward that falls outside this scheme: slashing whistleblower rewards. These rewards are treated separately because they are irregular (we don't know ahead of time how many slashings there will be), and they don't contribute to issuance (because the slashing whistleblower reward is counterbalanced by a much larger slashing penalty suffered by whoever was slashed).
 
 ## Custom types
 
@@ -99,7 +99,7 @@ Note also that there is one reward that falls outside this scheme: slashing whis
 | - | - | - |
 | `ParticipationFlags` | `uint8` | a succinct representation of 8 boolean participation flags |
 
-We will maintain a byte array to store which actions a validator has successfully taken during a given epoch, so that we can calculate finality and other global statistics and reward or penalize validators at the end of the epoch. Each validator gets 8 bits: 3 for each of their **attestation duties** (attesting to the correct Casper FFG source, to the correct Casper FFG target, and to the correct head), and 5 not-yet-used bits to be used for duties to be added in the future.
+We will maintain a byte array to store which actions a validator has successfully taken during a given epoch, so that we can calculate finality and other global statistics and reward or penalize validators at the end of the epoch. Each validator gets 8 bits: 3 for each of their [**attestation duties**](#aside-validator-duties-rewards-and-penalties), and 5 not-yet-used bits for duties that may be added in the future.
 
 ## Constants
 
@@ -111,7 +111,7 @@ We will maintain a byte array to store which actions a validator has successfull
 | `TIMELY_SOURCE_FLAG_INDEX` | `1` |
 | `TIMELY_TARGET_FLAG_INDEX` | `2` |
 
-The "timely" here refers to the fact that fulfilling each of the three duties actually requires simultaneously meeting _two_ requirements: (i) correctly attesting to something, and (ii) having your attestation be included on time. See [the modified `process_attestation` function](#modified-process_attestation) for the exact specification of each of the three duties.
+These are the positions in the `ParticipationFlags` bitfield at which we track whether or not each validator fulfilled that particular duty in the current and previous epoch.
 
 ### Incentivization weights
 
@@ -124,17 +124,7 @@ The "timely" here refers to the fact that fulfilling each of the three duties ac
 | `PROPOSER_WEIGHT` | `uint64(8)` |
 | `WEIGHT_DENOMINATOR` | `uint64(64)` |
 
-Altair introduces a simpler and cleaner reward scheme for validators. The maximum reward that a validator can get in an epoch (if they (and others) perform perfectly) is determined by the [`get_base_reward` function](#get_base_reward), approximately equal to:
-
-```
-validator_balance * BASE_REWARD_FACTOR / sqrt(total_active_balance)
-```
-
-Where `BASE_REWARD_FACTOR = 64` and the balances and rewards are all denominated in gwei.
-
-For example, if a validator has 32 ETH and the total active balance is 5 million ETH, the validator would get `(32 * 10**9 * 64) / sqrt(5000000 * 10**9) = 28963` gwei (the `* 10**9` being conversion from ETH to gwei). Multiplying that result by `31556925 / 384` (epochs per year), you get a reward of ~2.38 billion gwei, or 2.38 ETH, per year. If a validator performs imperfectly (or even if _other validators_ perform imperfectly), these rewards would be reduced somewhat, though in a well-running network rewards can often exceed 97% of the theoretical maximum.
-
-The validator's reward is in turn made up of different parts, each of which are rewards for fulfilling a particular **duty**. The first three duties (`TIMELY_HEAD`, `TIMELY_SOURCE` and `TIMELY_TARGET`) are for making attestations to the correct blocks and publishing them and getting them included quickly enough. These duties together make up `(12+12+24)/64`, or `3/4`, of the total reward. The remaining duties are participating in the sync committee (`8/64`, or `1/8`, of the total reward) and proposing blocks (also `8/64`, or `1/8`, of the total reward).
+Reward weights for each duty (see [here](#aside-validator-duties-rewards-and-penalties) for a more detailed description of this concept).
 
 ### Misc
 
@@ -156,7 +146,9 @@ This patch updates a few configuration values to move penalty parameters closer 
 | `MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR` | `uint64(2**6)` (= 64) |
 | `PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR` | `uint64(2)` |
 
-The inactivity penalty quotient reduction should reduce the time that it takes for balances to leak by ~13.4% (not 25% because time-to-leak is proportional to the _square root_ of this quotient). The slashing penalty quotient changes increase the maximum loss from slashing from 0.25 ETH to 0.5 ETH, and decrease the percentage of misbehaving validators required for a slashing loss to be total from 100% to 50%.
+* The inactivity penalty quotient is reduced by 25% from `2**26` to `3 * 2**24`. This should reduce the time that it takes for balances to leak by ~13.4% (as time-to-leak is proportional to the _square root_ of this quotient).
+* The minimum slashing penalty quotient is decreased from 128 to 64. This quotient is the minimum fraction of your total balance that a slashed validator will lose, so this change increases the minimum slashing penalty from 0.25 ETH to 0.5 ETH
+* The proportional slashing multiplier is increased from 1 to 2, meaning that the slashing penalty will now be _double_ the percentage of other validators that were slashed within 18 days of that validator. For example, if you are slashed and within 18 days [in both directions] 7% of other validators are also slashed, pre-Altair your slashing penalty would have been 7%, post-Altair it would be 14%.
 
 ### Misc
 
