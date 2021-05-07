@@ -150,17 +150,9 @@ This patch updates a few configuration values to move penalty parameters closer 
 * The minimum slashing penalty quotient is decreased from 128 to 64. This quotient is the minimum fraction of your total balance that a slashed validator will lose, so this change increases the minimum slashing penalty from 0.25 ETH to 0.5 ETH
 * The proportional slashing multiplier is increased from 1 to 2, meaning that the slashing penalty will now be _double_ the percentage of other validators that were slashed within 18 days of that validator. For example, if you are slashed and within 18 days [in both directions] 7% of other validators are also slashed, pre-Altair your slashing penalty would have been 7%, post-Altair it would be 14%.
 
-### Aside: sync committees
-
-The **sync committee** is the "flagship feature" of the Altair hard fork. This is a committee of 512 validators that is randomly selected every **sync committee period (~2 days)**, and is assigned to continually sign the block header that is the new head of the chain at each slot. This allows light clients to keep track of the chain of beacon block headers: if they have a beacon block header, they can use a Merkle branch to verify the sync committee for that period and the next period, and then they can authenticate newer beacon block headers by verifying **sync committee signatures** of those headers.
-
-![](lightsync.png)
-
-_The above diagram shows the procedure to validate a block header in sync committee period X+1 knowing a block header in sync committee period X. The sync committee aggregate signature of the newer header can be downloaded from the p2p network; it can be verified against the public keys in the sync committee that is part of the Merkle state tree of the older header._
-
-The minimum cost for light clients to track the chain is only about 25 kB per two days. Whenever a new sync committee period begins, a light client needs to download and verify a beacon block header that was produced during the new sync committee period (along with a sync committee signature of it). They need to then download a Merkle branch and the next sync committee of that beacon block header (512 48-byte public keys, the bulk of the data cost), and authenticate the Merkle branch. Having done this, the light client is now equipped to validate the sync committee signatures of any block header within the next two sync committee periods. Of course, closely following the chain does require more data bandwidth.
-
 ### Misc
+
+**See [the sync protocol spec](./sync-protocol.md) for a description of what sync committees are and how the light client sync protocol works.**
 
 | Name | Value |
 | - | - |
