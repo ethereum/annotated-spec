@@ -164,7 +164,7 @@ The sync committee is set to 512 validators, a relatively large and conservative
 | `INACTIVITY_SCORE_BIAS` | `uint64(4)` |
 | - | - |
 
-See [the later section on inactivity penalty calculation](#modified-get_inactivity_penalty_deltas) for details.
+See [the later section on inactivity penalty calculation](#modified-get_inactivity_penalty_deltas) for details on inactivity scores.
 
 ### Time parameters
 
@@ -172,7 +172,7 @@ See [the later section on inactivity penalty calculation](#modified-get_inactivi
 | - | - | :-: | :-: |
 | `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256) | epochs | ~27 hours |
 
-A new sync committee is chosen once every two days.
+A new sync committee is chosen once every ~2 days.
 
 ### Domain types
 
@@ -203,7 +203,7 @@ class BeaconBlockBody(Container):
     sync_aggregate: SyncAggregate
 ```
 
-The beacon block body now contains a `SyncAggregate` object, basically an aggregate signature (a BLS signature plus a bitfield of who participated) signed by the sync committee. Note that the `SyncAggregate` would also be separately broadcasted over the wire for light clients; it's included on-chain only so that participants in the signature can be rewarded.
+The beacon block body now contains a [`SyncAggregate` object](#syncaggregate), which is a fairly standard BLS aggregate signature (a BLS signature plus a bitfield of who participated) signed by the sync committee. Note that the `SyncAggregate` would also be separately broadcasted over the wire for light clients; it's included on-chain only so that validators who contributed to the signature can be rewarded.
 
 #### `BeaconState`
 
@@ -245,7 +245,7 @@ class BeaconState(Container):
     next_sync_committee: SyncCommittee  # [New in Altair]
 ```
 
-The beacon state commits to the current sync committee and the next sync committee so that light clients that have accepted a block header can easily authenticate the sync committee for the next period. Without this feature, it would be difficult to do so, as it would require a computation on the entire validator set to determine the active validator list, and even after that point require a Merkle branch for each committee member.
+The beacon state commits to the current sync committee and the next sync committee so that light clients that have accepted a block header can easily authenticate the sync committee for the next period. Without this feature, it would be difficult to do so, as it would require a computation on the entire validator set to determine the active validator list, and even after that point require a Merkle branch for each committee member. See [the sync protocol doc](./sync-protocol.md) for more details.
 
 ### New containers
 
@@ -361,7 +361,7 @@ This is the core function that computes the sync committee that will be active i
 
 The base epoch being set to the start of the previous sync committee period ensures that there will always be at least one full period of look-ahead between when a committee is known and when the committee is used. This allows the sync committee that will be active in period N+1 to be computed and committed to in the `BeaconState` at the start of period N, allowing light clients to verify the sync committee from period N+1 from a period N block and thereby jump forward quickly through the header chain.
 
-For shuffling, note that the probability of being accepted is proportional to your balance. Hence, there is no need for participation rewards to be proportional to balance, and there is also no need for the light client fork choice rule to care about the balances of sync committee members. Additionally, note that the sync committee is always filled to its maximum size; if the validator count is extremely low and it is absolutely needed to do this, this algorithm wraps around and walks through the shuffled validator set multiple times, and it can even accept the same validator multiple times into the committee.
+Note that the probability of being accepted is proportional to your balance. Because of this, there is no need for participation rewards to be proportional to balance, and there is also no need for the light client fork choice rule to care about the balances of sync committee members. Additionally, note that the sync committee is always filled to its maximum size; if the validator count is extremely low and it is absolutely needed to do this, this algorithm wraps around and walks through the shuffled validator set multiple times, and it can even accept the same validator multiple times into the committee.
 
 #### `get_sync_committee`
 
@@ -388,8 +388,8 @@ def get_base_reward_per_increment(state: BeaconState) -> Gwei:
 
 The `get_base_reward` function is being re-factored for Altair to make it cleaner. The key changes are:
 
-1. Split up the logic into `get_base_reward_per_increment` (the reward for a hypothetical 1 ETH validator) and `get_base_reward` that simply multiplies that value by the amount of ETH in the validator's effective balance. This was done because sync committee reward logic needs to use `get_base_reward_per_increment` as a standalone function.
-2. The output of `get_base_reward` now represents the _entire_ theoretical maximum expected long-term reward, and not merely one component of it as before. This was done just to increase simplicity.
+1. Split up the logic into `get_base_reward_per_increment`, a function that outputs the reward for a hypothetical 1 ETH validator, and a simplified `get_base_reward` that just multiplies the base-reward-per-increment by the amount of ETH in the validator's effective balance. This was done because sync committee reward logic needs to use `get_base_reward_per_increment` as a standalone function.
+2. The output of `get_base_reward` now represents the _entire_ theoretical maximum expected long-term reward, and not merely one component of it as before. This was done to make it easier to reason about validator rewards.
 
 #### `get_base_reward`
 
@@ -427,7 +427,7 @@ def get_unslashed_participating_indices(state: BeaconState, flag_index: int, epo
 
 A major feature of Altair is reforming how we keep track of which validators fulfilled which duties during an epoch so we can reward them and compute finality.
 
-Note that there are many subtle considerations in doing this correctly. The easiest approach to solve this problem that a naive observer might think of is to simply give validators their reward and tracking progress toward finality immediately. However, this suffers from three key problems:
+There are many subtle considerations in doing this correctly. The easiest approach to solve this problem that a naive observer might think of is to simply give validators their reward and tracking progress toward finality immediately. However, this suffers from three key problems:
 
 1. It does not prevent validators from getting their attestations included twice (preventing that would require some kind of bitfield _anyway_)
 2. It does not have an easy path to allow rewards to be proportional to total participation levels (a feature that we want to keep to discourage censorship and inter-validator attacks)
@@ -503,7 +503,7 @@ The difference is for _imperfectly active validators_. The inactivity score's be
 * If, during an inactivity leak epoch, a validator fails to submit an attestation with the correct source and target, their inactivity score goes up by 4
 * If, during _any_ epoch, a validator successfully submits an attestation with the correct source and target, their inactivity score drops by 1
 
-This means that if a validator participates correctly more than 80% of the time, their inactivity score will hover close to zero, and so their inactivity leak penalties will be very close to zero. Validators that miss more than 20% of epochs will see their inactivity scores rise, though even there the penalties are slow at first (eg. a validator that misses 25% of epochs will only suffer ~1/4 the inactivity leak of a validator that misses 30% of epochs).
+This means that if a validator participates correctly more than 80% of the time, their inactivity score will hover close to zero, and so their inactivity leak penalties will be very close to zero. Validators that miss more than 20% of epochs will see their inactivity scores rise, though even there the penalties are slow at first (eg. a validator that misses 25% of epochs will only suffer ~1/4 the inactivity leak of a validator that misses 30% of epochs). Only validators that miss all or a large portion of epochs during an inactivity leak will be heavily penalized.
 
 ### Beacon state mutators
 
@@ -789,7 +789,7 @@ def process_participation_flag_updates(state: BeaconState) -> None:
     state.current_epoch_participation = [ParticipationFlags(0b0000_0000) for _ in range(len(state.validators))]
 ```
 
-This function simply ensures that a new participation flags array gets initialized for each new epoch, and that the array for the current epoch becomes the array for the previous epoch when appropriate. The logic is the same to the logic of how `PendingAttestation` lists were updated at epoch boundaries pre-Altair.
+This function ensures that a new participation flags array gets initialized for each new epoch, and that the array for the current epoch becomes the array for the previous epoch when appropriate. The logic is the same to the logic of how `PendingAttestation` lists were updated at epoch boundaries pre-Altair.
 
 #### Sync committee updates
 

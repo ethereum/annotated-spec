@@ -8,6 +8,7 @@ Currently the following parts of the spec are available in annotated form:
 ### Altair
 
 * [Changes to the beacon chain](altair/beacon-chain.md)
+* [Light client sync protocol](altair/sync-protocol.md)
 
 ### Phase 1
 
