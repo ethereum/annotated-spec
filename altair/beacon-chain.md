@@ -543,12 +543,12 @@ The difference is for _imperfectly active validators_. The inactivity score's be
 
 This means that if a validator participates correctly more than 80% of the time, their inactivity score will hover close to zero, and so their inactivity leak penalties will be very close to zero. Validators that miss more than 20% of epochs will see their inactivity scores rise, though even there the penalties are slow at first (eg. a validator that misses 25% of epochs will only suffer ~1/4 the inactivity leak of a validator that misses 30% of epochs). Only validators that miss all or a large portion of epochs during an inactivity leak will be heavily penalized. Additionally, note that the leak continues for a short time after the chain resumes finalizing, reducing the chance that the chain gets stuck with _just above_ 2/3 mostly-active validators and then repeatedly switches between the finalizing and non-finalizing state.
 
-Here is an example of a serious leak, with four validators having different behavior: (i) consistently online 90% of the time, (ii) consistently online 70% of the time, (iii) temporarily offline for a short period, and (iv) offline the whole time:
+Here is an example of a serious leak, with five validators having different behavior: (i) always online, (ii) consistently online 90% of the time, (iii) consistently online 70% of the time, (iv) temporarily offline for a short period, and (v) offline the whole time:
 
 <br><center><img src="offlinechart.png" /></center><br>
 <br><center><img src="offlinechart2.png" /></center><br>
 
-Notice that the fully offline validator suffers _far higher_ losses than the others. The 90%-online validator suffers barely any losses at all (there are small losses, but they are barely visible on the graph). After the chain resumes finalizing, the 70%-online validator leaks for a little bit more (also barely noticeable on the graph) but their inactivity score quickly drops to zero; the fully offline validator, on the other hand, leaks considerably more even after the chain resumes finalizing.
+Notice that the fully offline validator suffers _far higher_ losses than the others. The 90%-online validator's losses are tiny and barely visible on the graph: you can see the red line slightly below the blue line on the graph if you peek carefully. After the chain resumes finalizing, the 70%-online validator leaks for a little bit more (also barely noticeable on the graph) but their inactivity score quickly drops to zero; the fully offline validator, on the other hand, leaks considerably more even after the chain resumes finalizing.
 
 ### Beacon state mutators
 
