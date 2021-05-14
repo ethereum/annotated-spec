@@ -2,6 +2,8 @@
 
 This is an annotated version of the Altair beacon chain spec. 
 
+_See also: the [annotated sync committee spec](./sync-committee.md)._
+
 ## Table of contents
 
 <!-- TOC -->
