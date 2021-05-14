@@ -545,8 +545,12 @@ This means that if a validator participates correctly more than 80% of the time,
 
 Here is an example of a serious leak, with five validators having different behavior: (i) always online, (ii) consistently online 90% of the time, (iii) consistently online 70% of the time, (iv) temporarily offline for a short period, and (v) offline the whole time:
 
-<br><center><img src="offlinechart.png" /></center><br>
-<br><center><img src="offlinechart2.png" /></center><br>
+<center>
+<img src="offlinechart.png" />
+<br>
+<img src="offlinechart2.png" />
+<br>
+</center>
 
 Notice that the fully offline validator suffers _far higher_ losses than the others. The 90%-online validator's losses are tiny and barely visible on the graph: you can see the red line slightly below the blue line on the graph if you peek carefully. After the chain resumes finalizing, the 70%-online validator leaks for a little bit more (also barely noticeable on the graph) but their inactivity score quickly drops to zero; the fully offline validator, on the other hand, leaks considerably more even after the chain resumes finalizing.
 
