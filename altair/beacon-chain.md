@@ -16,8 +16,8 @@ This is an annotated version of the Altair beacon chain spec.
   - [Misc](#misc)
 - [Configuration](#configuration)
   - [Updated penalty values](#updated-penalty-values)
+  - [Sync committee](#sync-committee)
   - [Misc](#misc-1)
-  - [Time parameters](#time-parameters)
   - [Domain types](#domain-types)
 - [Containers](#containers)
   - [Modified containers](#modified-containers)
@@ -30,15 +30,15 @@ This is an annotated version of the Altair beacon chain spec.
   - [`Predicates`](#predicates)
     - [`eth2_fast_aggregate_verify`](#eth2_fast_aggregate_verify)
   - [Misc](#misc-2)
-    - [`get_flag_indices_and_weights`](#get_flag_indices_and_weights)
     - [`add_flag`](#add_flag)
     - [`has_flag`](#has_flag)
   - [Beacon state accessors](#beacon-state-accessors)
-    - [`get_sync_committee_indices`](#get_sync_committee_indices)
-    - [`get_sync_committee`](#get_sync_committee)
+    - [`get_next_sync_committee_indices`](#get_next_sync_committee_indices)
+    - [`get_next_sync_committee`](#get_next_sync_committee)
     - [`get_base_reward_per_increment`](#get_base_reward_per_increment)
     - [`get_base_reward`](#get_base_reward)
     - [`get_unslashed_participating_indices`](#get_unslashed_participating_indices)
+    - [`get_attestation_participation_flag_indices`](#get_attestation_participation_flag_indices)
     - [`get_flag_index_deltas`](#get_flag_index_deltas)
     - [Modified `get_inactivity_penalty_deltas`](#modified-get_inactivity_penalty_deltas)
   - [Beacon state mutators](#beacon-state-mutators)
@@ -73,15 +73,20 @@ Altair is the first hard fork of the Ethereum beacon chain. Its main features ar
 
 ### Aside: validator duties, rewards and penalties
 
-One of the main conceptual reworks of Altair is redesigning how validators are rewarded and penalized to make these incentives more systematic and easy to reason about. Validators are rewarded for fulfilling **duties** - tasks that they are assigned as part of the job of being a validators. These duties come in two types: (i) **attestation duties**, duties to make an attestation in every epoch that gets included quickly and attests to the correct chain, and (ii) **non-attestation duties**, tasks that are not connected to attesting and that any individual validator gets assigned to more rarely. In Altair, the complete list of duties is:
+One of the main conceptual reworks of Altair is redesigning how validators are rewarded and penalized to make these incentives more systematic and easy to reason about. Validators are rewarded for fulfilling **duties** - tasks that they are assigned as part of the job of being a validator. These duties come in two types:
+
+* **Attestation duties**: duties to make an attestation in every epoch that gets included quickly and attests to the correct chain
+* **Non-attestation duties**: tasks that are not connected to attesting and that any individual validator gets assigned to more rarely.
+
+In Altair, the complete list of duties is:
 
 * **`TIMELY_HEAD`**: submit an attestation that correctly identifies the head of the chain, and gets included on chain in the next slot
-* **`TIMELY_TARGET`**: submit an attestation that correctly identifies the Casper FFG target, and gets included within `sqrt(EPOCH_LENGTH)` slots
-* **`TIMELY_SOURCE`**: submit an attestation that correctly identifies the Casper FFG source, and gets included within `EPOCH_LENGTH` slots
+* **`TIMELY_TARGET`**: submit an attestation that correctly identifies the Casper FFG target, and gets included within `EPOCH_LENGTH` slots
+* **`TIMELY_SOURCE`**: submit an attestation that correctly identifies the Casper FFG source, and gets included within `sqrt(EPOCH_LENGTH)` slots
 * **Sync committee participation**: if you are part of a sync committee, submit the sync committee signature
 * **Proposing**: propose a block if you are assigned to do so
 
-The total theoretical long-run average reward per epoch that a validator can get is determined by the [`get_base_reward`](#get_base_reward) function. Note that this is the maximum long-run average, _not_ the maximum reward in any given epoch. In particular, rewards for submitting sync committee signatures and for proposing are typically much larger than the `get_base_reward`, but any given validator is only assigned these tasks infrequently, and so the average per-epoch reward going to a validator who fulfills these tasks is only a fraction of the base reward.
+The total theoretical long-run average reward per epoch that a validator can get is determined by the [`get_base_reward`](#get_base_reward) function. Note that this is the maximum long-run average, _not_ the maximum reward in any given epoch. In particular, rewards for submitting sync committee signatures and for proposing are typically much larger than the base reward, but any given validator only gets those rewards during the very infrequent epochs during which they are assigned to those tasks.
 
 The base reward is split up into pieces where each piece is allocated to one of these duties:
 
@@ -89,7 +94,14 @@ The base reward is split up into pieces where each piece is allocated to one of 
 
 Each piece is represented as a fraction `X / WEIGHT_DENOMINATOR`, where `WEIGHT_DENOMINATOR = 64`; the `X` values for the various pieces sum up to 64, making up a full base reward.
 
-Note that if a duty is assigned a `X / WEIGHT_DENOMINATOR` share of the pie, that does not necessarily mean that a validator who fulfills that duty is guaranteed to get exactly that fraction times the base reward. The reward that a validator gets for fulfilling an attestation duty is proportional to the percentage of all validators who fulfill that duty (eg. if only 80% of validators fulfill the duty then the reward for each validator that does is multiplied by 0.8); this rule was added to discourage censorship and inter-validator attacks. A validator only gets sync committee rewards if their signature is included in the next beacon block, which may fail to happen either due to the sync committee member's own negligence or due to the negligence of the next proposer. Proposers are rewarded for including other messages, so proposers may lose some rewards from those messages not being published. However, in a well-functioning network, rewards for most participants for all duties should get quite close to the theoretical maximums.
+Note that if a duty is assigned a `X / WEIGHT_DENOMINATOR` share of the pie, that does not necessarily mean that a validator who fulfills that duty is guaranteed to get exactly that fraction times the base reward. Actually experienced rewards can diverge from the `X / WEIGHT_DENOMINATOR` fraction for a few reasons:
+
+1. The validator fulfills that duty imperfectly, and it's their fault (eg. they are offline for some time)
+2. The validator fulfills that duty imperfectly, and it's _not_ their fault (eg. they cannot get their attestation or sync committee signature included within a slot because the _next_ proposer is offline or poorly connected)
+3. Validator rewards for fulfilling an attestation duty are proportional to the percentage of all validators who fulfill that duty (eg. if only 80% of validators fulfill the duty then the reward for each validator that does is multiplied by `0.8`)
+4. Validators' rewards from probabilistically assigned duties (proposal and sync committee participation) may diverge due to random variance. For example, if there are 1000 validators, then they have a `1/1000` chance to propose per slot (so on average `0.032` proposals per epoch)
+
+(2) and (3) have the same property: that a validator's rewards can be reduced by other validators' failure to participate. This is a deliberate mechanic that was added to discourage censorship and inter-validator attacks (see [this paper on discouragement attacks](https://raw.githubusercontent.com/ethereum/research/master/papers/discouragement/discouragement.pdf) for why this is valuable).
 
 There is one reward that falls outside this scheme: slashing whistleblower rewards. These rewards are treated separately because they are irregular (we don't know ahead of time how many slashings there will be), and they don't contribute to issuance (because the slashing whistleblower reward is counterbalanced by a much larger slashing penalty suffered by whoever was slashed).
 
@@ -131,6 +143,7 @@ Reward weights for each duty (see [here](#aside-validator-duties-rewards-and-pen
 | Name | Value |
 | - | - |
 | `G2_POINT_AT_INFINITY` | `BLSSignature(b'\xc0' + b'\x00' * 95)` |
+| `PARTICIPATION_FLAG_WEIGHTS` | `[TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_FLAG_INDEX]` |
 
 ## Configuration
 
@@ -156,23 +169,19 @@ This patch updates a few configuration values to move penalty parameters closer 
 
 | Name | Value |
 | - | - |
-| `SYNC_COMMITTEE_SIZE` | `uint64(2**10)` (= 1,024) |
-| `SYNC_PUBKEYS_PER_AGGREGATE` | `uint64(2**6)` (= 64) |
+| `SYNC_COMMITTEE_SIZE` | `uint64(2**9)` (= 512) |
+| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**9)` (= 512) | epochs | ~54 hours |
 
-The sync committee is set to 512 validators, a relatively large and conservative size (compared to attestation and later shard proposal committees) to ensure safety.
+The sync committee is set to 512 validators, a relatively large and conservative size (compared to attestation and later shard proposal committees) to ensure safety. A sync committee is chosen once every ~2 days. Shorter periods would increase data load on light clients as they would need to sync more frequently, and longer periods would leave open too much opportunity to discover and corrupt committee members; ~2 days was chosen as the happy medium that fares reasonably well on both dimensions.
 
-| `INACTIVITY_SCORE_BIAS` | `uint64(4)` |
+### Misc
+
+| Name | Value |
 | - | - |
+| `INACTIVITY_SCORE_BIAS` | `uint64(4)` |
+| `INACTIVITY_SCORE_RECOVERY RATE` | `uint64(16)` |
 
 See [the later section on inactivity penalty calculation](#modified-get_inactivity_penalty_deltas) for details on inactivity scores.
-
-### Time parameters
-
-| Name | Value | Unit | Duration |
-| - | - | :-: | :-: |
-| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256) | epochs | ~27 hours |
-
-A new sync committee is chosen once every ~2 days.
 
 ### Domain types
 
@@ -262,7 +271,7 @@ class SyncAggregate(Container):
 ```python
 class SyncCommittee(Container):
     pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
-    pubkey_aggregates: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE // SYNC_PUBKEYS_PER_AGGREGATE]
+    aggregate_pubkey: BLSPubkey
 ```
 
 We store not just each individual pubkey, but also the sum of all the pubkeys. This is done so that when sync committees have a very high level of participation, few elliptic curve additions are required to verify the signature: you can just start with the sum and _subtract out_ all the pubkeys that did not participate.
@@ -286,22 +295,6 @@ def eth2_fast_aggregate_verify(pubkeys: Sequence[BLSPubkey], message: Bytes32, s
 There are a few minor discrepancies between how the IETF BLS signature standard handles signatures and the needs of the eth2 protocol; to deal with this, in a few cases we need to wrap the IETF standard to replace its behavior with our own preferred behavior. Here, the important case is that multi-verification in the IETF standard does not support the empty signature as a valid signature for an empty aggregate, but in our use cases it's critically important to be able to support the empty case (in case no sync committee members at all get their signatures included).
 
 ### Misc
-
-#### `get_flag_indices_and_weights`
-
-```python
-def get_flag_indices_and_weights() -> Sequence[Tuple[int, uint64]]:
-    """
-    Return paired tuples of participation flag indices along with associated incentivization weights.
-    """
-    return (
-        (TIMELY_HEAD_FLAG_INDEX, TIMELY_HEAD_WEIGHT),
-        (TIMELY_SOURCE_FLAG_INDEX, TIMELY_SOURCE_WEIGHT),
-        (TIMELY_TARGET_FLAG_INDEX, TIMELY_TARGET_WEIGHT),
-    )
-```
-
-These are the three attester duties and their corresponding weights. The "flag index" is the position in the `ParticipationFlags` mini-bitfield that is used to store whether or not a given validator has fulfilled that duty.
 
 #### `add_flag`
 
@@ -330,16 +323,19 @@ def has_flag(flags: ParticipationFlags, flag_index: int) -> bool:
 #### `get_sync_committee_indices`
 
 ```python
-def get_sync_committee_indices(state: BeaconState, epoch: Epoch) -> Sequence[ValidatorIndex]:
+def get_next_sync_committee_indices(state: BeaconState) -> Sequence[ValidatorIndex]:
     """
     Return the sequence of sync committee indices (which may include duplicate indices)
-    for a given ``state`` and ``epoch``.
+    for the next sync committee, given a ``state`` at a sync committee period boundary.
+
+    Note: Committee can contain duplicate indices for small validator sets (< SYNC_COMMITTEE_SIZE + 128)
     """
+    epoch = Epoch(get_current_epoch(state) + 1)
+
     MAX_RANDOM_BYTE = 2**8 - 1
-    base_epoch = Epoch((max(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD, 1) - 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-    active_validator_indices = get_active_validator_indices(state, base_epoch)
+    active_validator_indices = get_active_validator_indices(state, epoch)
     active_validator_count = uint64(len(active_validator_indices))
-    seed = get_seed(state, base_epoch, DOMAIN_SYNC_COMMITTEE)
+    seed = get_seed(state, epoch, DOMAIN_SYNC_COMMITTEE)
     i = 0
     sync_committee_indices: List[ValidatorIndex] = []
     while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
@@ -347,34 +343,41 @@ def get_sync_committee_indices(state: BeaconState, epoch: Epoch) -> Sequence[Val
         candidate_index = active_validator_indices[shuffled_index]
         random_byte = hash(seed + uint_to_bytes(uint64(i // 32)))[i % 32]
         effective_balance = state.validators[candidate_index].effective_balance
-        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:  # Sample with replacement
+        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
             sync_committee_indices.append(candidate_index)
         i += 1
     return sync_committee_indices
 ```
 
-This is the core function that computes the sync committee that will be active in a given `epoch`. It proceeds as follows:
+This is the core function that computes the sync committee that will be active in the epoch _after_ the current epoch. **Note that this function should ONLY be called _once_, when sync committees are updated; actually reading the sync committee for all other purposes is done with the logic in [the sync committee processing method](#sync-committee-processing)**. This function works as follows:
 
-* Compute the `base_epoch`, the epoch at the _start of the previous_ sync committee period (eg. if the sync committee period length was 100 epochs, and the `epoch` was 557, the `base_epoch` would be 400). 
-* Compute the active validator indices at the `base_epoch`
-* Walk through the shuffled indices based on the seed at the `base_epoch` (that is, go through `compute_shuffled_index(0)`, `compute_shuffled_index(1)`, etc.). For each index, accept that validator with probability `B/32` where `B` is their effective balance.
+* Compute the active validator indices at the next epoch.
+* Walk through the shuffled indices based on the seed at the next epoch (that is, go through `compute_shuffled_index(0)`, `compute_shuffled_index(1)`, etc.). For each index, accept that validator with probability `B/32` where `B` is their effective balance.
 
-The base epoch being set to the start of the previous sync committee period ensures that there will always be at least one full period of look-ahead between when a committee is known and when the committee is used. This allows the sync committee that will be active in period N+1 to be computed and committed to in the `BeaconState` at the start of period N, allowing light clients to verify the sync committee from period N+1 from a period N block and thereby jump forward quickly through the header chain.
+Note that the probability of being accepted is proportional to your balance. Because of this, there is no need for participation rewards to be proportional to balance, and there is also no need for the light client fork choice rule to care about the balances of sync committee members. Additionally, note that the sync committee is always filled to its maximum size. If the validator count is too low to fill the sync committee with a single pass, this algorithm wraps around and walks through the shuffled validator set multiple times. If needed, the same validator may even be accepted multiple times into the sync committee.
 
-Note that the probability of being accepted is proportional to your balance. Because of this, there is no need for participation rewards to be proportional to balance, and there is also no need for the light client fork choice rule to care about the balances of sync committee members. Additionally, note that the sync committee is always filled to its maximum size; if the validator count is extremely low and it is absolutely needed to do this, this algorithm wraps around and walks through the shuffled validator set multiple times, and it can even accept the same validator multiple times into the committee.
-
-#### `get_sync_committee`
+#### `get_next_sync_committee`
 
 ```python
-def get_sync_committee(state: BeaconState, epoch: Epoch) -> SyncCommittee:
+def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
     """
-    Return the sync committee for a given ``state`` and ``epoch``.
+    Return the *next* sync committee for a given ``state``.
+
+    ``SyncCommittee`` contains an aggregate pubkey that enables
+    resource-constrained clients to save some computation when verifying
+    the sync committee's signature.
+
+    ``SyncCommittee`` can also contain duplicate pubkeys, when ``get_next_sync_committee_indices``
+    returns duplicate indices. Implementations must take care when handling
+    optimizations relating to aggregation and verification in the presence of duplicates.
+
+    Note: This function should only be called at sync committee period boundaries by ``process_sync_committee_updates``
+    as ``get_next_sync_committee_indices`` is not stable within a given period.
     """
-    indices = get_sync_committee_indices(state, epoch)
+    indices = get_next_sync_committee_indices(state)
     pubkeys = [state.validators[index].pubkey for index in indices]
-    partition = [pubkeys[i:i + SYNC_PUBKEYS_PER_AGGREGATE] for i in range(0, len(pubkeys), SYNC_PUBKEYS_PER_AGGREGATE)]
-    pubkey_aggregates = [bls.AggregatePKs(preaggregate) for preaggregate in partition]
-    return SyncCommittee(pubkeys=pubkeys, pubkey_aggregates=pubkey_aggregates)
+    aggregate_pubkey = bls.AggregatePKs(pubkeys)
+    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 ```
 
 This function computes a `SyncCommittee` object, which is an SSZ representation of the public keys contained in a sync committee. It contains the pubkey of each member of the sync committee, plus an aggregate (the sum of all the pubkeys) to make signature verification easier in that case where almost everyone participates in a sync committee signature and so you only need to subtract out a few non-participants to generate the group public key.
@@ -427,15 +430,48 @@ def get_unslashed_participating_indices(state: BeaconState, flag_index: int, epo
 
 A major feature of Altair is reforming how we keep track of which validators fulfilled which duties during an epoch so we can reward them and compute finality.
 
-There are many subtle considerations in doing this correctly. The easiest approach to solve this problem that a naive observer might think of is to simply give validators their reward and tracking progress toward finality immediately. However, this suffers from three key problems:
+There are many subtle considerations in doing this correctly. The easiest approach to solve this problem that a naive observer might think of is to simply give validators their reward and track progress toward finality directly in the state. However, this suffers from three key problems:
 
 1. It does not prevent validators from getting their attestations included twice (preventing that would require some kind of bitfield _anyway_)
 2. It does not have an easy path to allow rewards to be proportional to total participation levels (a feature that we want to keep to discourage censorship and inter-validator attacks)
-3. It would require random-access updates to validator balances, which are expensive. This is because a random-access update requires re-computing a Merkle branch, or up to 22 hashes per validator per epoch. Updating balances at the end of an epoch in a batch, on the other hand, simply re-computes the entire balance tree, costing ~1/4 hashes per validator per epoch (each balance is 8 bytes, a chunk is 32 bytes, an N-chunk Merkle tree requires N-1 hashes to recompute)
+3. It would require random-access updates to validator balances, which are expensive. A random-access update requires re-computing a Merkle branch, or up to 22 hashes per validator per epoch. Updating balances at the end of an epoch in a batch, on the other hand, simply re-computes the entire balance tree, costing ~1/4 hashes per validator per epoch (each balance is 8 bytes, a chunk is 32 bytes, an N-chunk Merkle tree requires N-1 hashes to recompute)
 
 The pre-Altair approach to solve these problems was to avoid doing any attestation processing (except signature verification) immediately and instead store `PendingAttestation` objects, keeping the important data in the attestations received during an epoch in the state (and adding information about when they were received to keep track of timeliness). These `PendingAttestation` objects would be processed all at once at the end of the epoch.
 
 The Altair approach is more efficient: it stores a bitfield (1 byte per active validator) and updates the bitfield immediately when a validator fulfills a duty. We avoid the issues with random-access updates that would arise if we had immediately updated _balances_ because in the Altair approach the bitfield is stored _in shuffled order_. That is, the `ParticipationFlags` of the validators in the same committee are stored beside each other. This ensures the real-time cost of updating this bitfield is only ~1/32 hashes per validator (slightly more if there are two attestations for the same committee, but never too much more).
+
+#### `get_attestation_participation_flag_indices`
+
+```
+def get_attestation_participation_flag_indices(state: BeaconState,
+                                               data: AttestationData,
+                                               inclusion_delay: uint64) -> Sequence[int]:
+    """
+    Return the flag indices that are satisfied by an attestation.
+    """
+    if data.target.epoch == get_current_epoch(state):
+        justified_checkpoint = state.current_justified_checkpoint
+    else:
+        justified_checkpoint = state.previous_justified_checkpoint
+
+    # Matching roots
+    is_matching_source = data.source == justified_checkpoint
+    is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
+    is_matching_head = is_matching_target and data.beacon_block_root == get_block_root_at_slot(state, data.slot)
+    assert is_matching_source
+
+    participation_flag_indices = []
+    if is_matching_source and inclusion_delay <= integer_squareroot(SLOTS_PER_EPOCH):
+        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
+    if is_matching_target and inclusion_delay <= SLOTS_PER_EPOCH:
+        participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
+    if is_matching_head and inclusion_delay == MIN_ATTESTATION_INCLUSION_DELAY:
+        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
+
+    return participation_flag_indices
+```
+
+This function determines which subset of duties an attestation has satisfied.
 
 #### `get_flag_index_deltas`
 
@@ -500,10 +536,17 @@ For _fully inactive_ validators, the effect is the same: during each epoch that 
 
 The difference is for _imperfectly active validators_. The inactivity score's behavior is specified by [this function](#inactivity-scores):
 
-* If, during an inactivity leak epoch, a validator fails to submit an attestation with the correct source and target, their inactivity score goes up by 4
-* If, during _any_ epoch, a validator successfully submits an attestation with the correct source and target, their inactivity score drops by 1
+* If a validator fails to submit an attestation with the correct source and target, their inactivity score goes up by 4. If they successfully submit an attestation with the correct source and target, their inactivity score drops by 1
+* If the chain has recently finalized, each validator's score drops by 16.
 
-This means that if a validator participates correctly more than 80% of the time, their inactivity score will hover close to zero, and so their inactivity leak penalties will be very close to zero. Validators that miss more than 20% of epochs will see their inactivity scores rise, though even there the penalties are slow at first (eg. a validator that misses 25% of epochs will only suffer ~1/4 the inactivity leak of a validator that misses 30% of epochs). Only validators that miss all or a large portion of epochs during an inactivity leak will be heavily penalized.
+This means that if a validator participates correctly more than 80% of the time, their inactivity score will hover close to zero, and so their inactivity leak penalties will be very close to zero. Validators that miss more than 20% of epochs will see their inactivity scores rise, though even there the penalties are slow at first (eg. a validator that misses 25% of epochs will only suffer ~1/4 the inactivity leak of a validator that misses 30% of epochs). Only validators that miss all or a large portion of epochs during an inactivity leak will be heavily penalized. Additionally, note that the leak continues for a short time after the chain resumes finalizing, reducing the chance that the chain gets stuck with _just above_ 2/3 mostly-active validators and then repeatedly switches between the finalizing and non-finalizing state.
+
+Here is an example of a serious leak, with four validators having different behavior: (i) consistently online 90% of the time, (ii) consistently online 70% of the time, (iii) temporarily offline for a short period, and (iv) offline the whole time:
+
+<br><center><img src="offlinechart.png" /></center><br>
+<br><center><img src="offlinechart2.png" /></center><br>
+
+Notice that the fully offline validator suffers _far higher_ losses than the others. The 90%-online validator suffers barely any losses at all (there are small losses, but they are barely visible on the graph). After the chain resumes finalizing, the 70%-online validator leaks for a little bit more (also barely noticeable on the graph) but their inactivity score quickly drops to zero; the fully offline validator, on the other hand, leaks considerably more even after the chain resumes finalizing.
 
 ### Beacon state mutators
 
@@ -562,35 +605,21 @@ def process_attestation(state: BeaconState, attestation: Attestation) -> None:
     committee = get_beacon_committee(state, data.slot, data.index)
     assert len(attestation.aggregation_bits) == len(committee)
 
-    if data.target.epoch == get_current_epoch(state):
-        epoch_participation = state.current_epoch_participation
-        justified_checkpoint = state.current_justified_checkpoint
-    else:
-        epoch_participation = state.previous_epoch_participation
-        justified_checkpoint = state.previous_justified_checkpoint
-
-    # Matching roots
-    is_matching_source = data.source == justified_checkpoint
-    is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
-    is_matching_head = is_matching_target and data.beacon_block_root == get_block_root_at_slot(state, data.slot)
-    assert is_matching_source
+    # Participation flag indices
+    participation_flag_indices = get_attestation_participation_flag_indices(state, data, state.slot - data.slot)
 
     # Verify signature
     assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 
-    # Participation flag indices
-    participation_flag_indices = []
-    if is_matching_source and state.slot <= data.slot + integer_squareroot(SLOTS_PER_EPOCH):
-        participation_flag_indices.append(TIMELY_SOURCE_FLAG_INDEX)
-    if is_matching_target and state.slot <= data.slot + SLOTS_PER_EPOCH:
-        participation_flag_indices.append(TIMELY_TARGET_FLAG_INDEX)
-    if is_matching_head and state.slot == data.slot + MIN_ATTESTATION_INCLUSION_DELAY:
-        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
-
     # Update epoch participation flags
+    if data.target.epoch == get_current_epoch(state):
+        epoch_participation = state.current_epoch_participation
+    else:
+        epoch_participation = state.previous_epoch_participation
+
     proposer_reward_numerator = 0
     for index in get_attesting_indices(state, data, attestation.aggregation_bits):
-        for flag_index, weight in get_flag_indices_and_weights():
+        for flag_index, weight in enumerate(PARTICIPATION_FLAG_WEIGHTS):
             if flag_index in participation_flag_indices and not has_flag(epoch_participation[index], flag_index):
                 epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
                 proposer_reward_numerator += get_base_reward(state, index) * weight
@@ -676,7 +705,8 @@ def process_sync_committee(state: BeaconState, aggregate: SyncAggregate) -> None
     proposer_reward = Gwei(participant_reward * PROPOSER_WEIGHT // (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
 
     # Apply participant and proposer rewards
-    committee_indices = get_sync_committee_indices(state, get_current_epoch(state))
+    all_pubkeys = [v.pubkey for v in state.validators]
+    committee_indices = [ValidatorIndex(all_pubkeys.index(pubkey)) for pubkey in state.current_sync_committee.pubkeys]
     participant_indices = [index for index, bit in zip(committee_indices, aggregate.sync_committee_bits) if bit]
     for participant_index in participant_indices:
         increase_balance(state, participant_index, participant_reward)
@@ -733,12 +763,19 @@ The `weigh_justification_and_finalization` function, unchanged from pre-Altair, 
 
 ```python
 def process_inactivity_updates(state: BeaconState) -> None:
+    # Score updates based on previous epoch participation, skip genesis epoch
+    if get_current_epoch(state) == GENESIS_EPOCH:
+        return
+
     for index in get_eligible_validator_indices(state):
+        # Increase inactivity score of inactive validators
         if index in get_unslashed_participating_indices(state, TIMELY_TARGET_FLAG_INDEX, get_previous_epoch(state)):
-            if state.inactivity_scores[index] > 0:
-                state.inactivity_scores[index] -= 1
-        elif is_in_inactivity_leak(state):
+            state.inactivity_scores[index] -= min(1, state.inactivity_scores[index])
+        else:
             state.inactivity_scores[index] += INACTIVITY_SCORE_BIAS
+        # Decrease the score of all validators for forgiveness when not during a leak
+        if not is_in_inactivity_leak(state):
+            state.inactivity_scores[index] -= min(INACTIVITY_SCORE_RECOVERY_RATE, state.inactivity_scores[index])
 ```
 
 See [here](#modified-get_inactivity_penalty_deltas) for what this function is doing and how it is used.
