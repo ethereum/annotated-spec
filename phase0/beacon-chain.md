@@ -1886,7 +1886,7 @@ In the functions below, we'll see a pattern. There are four main properties of a
 
 For each one of these, we'll use one of the helpers defined above to determine the set of all validator indices that have that property in their attestations. We will then use this information to (i) reward or penalize them, and (ii) count their balance toward a total. The total is sometimes itself used when calculating rewards/penalties, but also to determine if 2/3 thresholds for Casper FFG or for shard committees have been met.
 
-We care about justifications included in the current _and_ the previous block, because it's possible that some attestations of a slot in the previous block were included in the current epoch, and so we need to combine together attestations on both sides of the boundary. If this were not done, a few proposers at the end of an epoch being malicious could easily prevent the chain from detecting justification and finality.
+We care about justifications included in the current _and_ the previous epoch, because it's possible that some attestations of a slot in the previous epoch were included in the current epoch, and so we need to combine together attestations on both sides of the boundary. If this were not done, a few proposers at the end of an epoch being malicious could easily prevent the chain from detecting justification and finality.
 
 #### Justification and finalization
 
