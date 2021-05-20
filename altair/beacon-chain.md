@@ -444,7 +444,7 @@ The Altair approach is more efficient: it stores a bitfield (1 byte per active v
 
 #### `get_attestation_participation_flag_indices`
 
-```
+```python
 def get_attestation_participation_flag_indices(state: BeaconState,
                                                data: AttestationData,
                                                inclusion_delay: uint64) -> Sequence[int]:
