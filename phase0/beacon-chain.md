@@ -214,7 +214,7 @@ We define the following Python custom types for type hinting and readability:
 | - | - | - |
 | `Slot` | `uint64` | a slot number |
 | `Epoch` | `uint64` | an epoch number (generally, epoch `i` consists of slots `EPOCH_LENGTH*i ... EPOCH_LENGTH*(i+1)-1`) |
-| `CommitteeIndex` | `uint64` | During every epoch, the validator set is randomly split up into `EPOCH_LENGTH` parts, one part for each slot in that epoch, but then within each slot that slot's validators are further divided into committees. In phase 0 this division does nothing, but in phase 1 these different committees get assigned to a different shard. `CommitteeIndex` is just the type of an integer when that integer refers to the index of a committee within a slot (is it the first committee, the second, the third?) |
+| `CommitteeIndex` | `uint64` | During every epoch, the validator set is randomly split up into `EPOCH_LENGTH` parts, one part for each slot in that epoch, but then within each slot that slot's validators are further divided into committees. In phase 0 this division does nothing, but in phase 1 these different committees get assigned to a different shard. `CommitteeIndex` is just the type of an integer, where that integer refers to the index of a committee within a slot (is it the first committee, the second, the third?) |
 | `ValidatorIndex` | `uint64` | Every validator is assigned a validator index upon depositing |
 | `Gwei` | `uint64` | An amount in Gwei |
 | `Root` | `Bytes32` | A Merkle root (typically of an SSZ object) |
@@ -225,7 +225,7 @@ We define the following Python custom types for type hinting and readability:
 | `BLSPubkey` | `Bytes48` | a BLS12-381 public key (see [here](https://ethresear.ch/t/pragmatic-signature-aggregation-with-bls/2105) for an explanation of the BLS signature scheme and its benefits) |
 | `BLSSignature` | `Bytes96` | a BLS12-381 signature |
 
-When you see a function like `def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:` (a real example in the spec), interpret it as "this function takes as input the beacon chain state and an integer representing a slot number, and outputs a Bytes32 which is a Merkle root". In this case, the Merkle root it outputs is the root hash of the block at the given slot (as you can tell from the name); but in general, paying attention to types will help make it easier for you to understand what's going on. In addition to being a debugging aid, the strong type system also functions as a type of comment.
+When you see a function like `def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:` (a real example in the spec), interpret it as "this function takes as input the beacon chain state and an integer representing a slot number, and outputs a `Bytes32` which is a Merkle root". In this case, the Merkle root it outputs is the root hash of the block at the given slot (as you can tell from the name); but in general, paying attention to types will help make it easier for you to understand what's going on. In addition to being a debugging aid, the strong type system also functions as a type of comment.
 
 ## Constants
 
@@ -243,27 +243,27 @@ The following values are (non-configurable) constants used throughout the specif
 
 ## Configuration
 
-Here, we have configurable constants, ie. if you adjust one of these up or down by 2x or even more, the network is likely not going to break. That said, a lot of thought went into setting these constants the way they are now, so it's better to learn the reasoning for why each of these values is set as they are.
+Here, we have configurable constants, ie. if you adjust one of these up or down by 2x or even more, the network is likely not going to break. That said, a lot of thought went into setting these constants the way they are now, so it's worth understanding why each of these values is set as they are.
 
 ### Misc
 
 | `ETH1_FOLLOW_DISTANCE` | `uint64(2**10)` (= 1,024) |
 | - | - |
 
-To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 1,024` blocks). Assuming that the eth1 chain does not revert that far, this lets us rely on an assumption that if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 1024 blocks correspond to a delay of ~3.7 hours (and note that getting an eth1 block _accepted_ into eth2 would take another ~1.7 hours). Historically, all problems on the eth1 net have been responded to within this period of time. Pushing this time to be even longer would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
+To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 1,024` blocks). Assuming the eth1 chain does not revert that far, this lets us rely on the following assumption: if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 1024 blocks correspond to a delay of ~3.7 hours (note that getting an eth1 block _accepted_ into eth2 takes another ~1.7 hours). Historically, all problems on the eth1 net have been responded to within this period of time. Stretching this time period further would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
 
 | `MAX_COMMITTEES_PER_SLOT` | `uint64(2**6)` (= 64) |
 | - | - |
 
-In phase 0, the whole idea of having multiple committees per slot serves no function; rather, this is preparatory work for phase 1, where each committee will be assigned to a different shard. We plan to have 64 shards at the start. Having fewer shards would lead to insufficient scalability; having more would lead to two undesirable consequences:
+In phase 0, the whole idea of having multiple committees per slot serves no function; rather, this is preparatory work for phase 1, where each committee will be assigned to a different shard. We plan to have 64 shards at the start. Having fewer shards leads to insufficient scalability; having more leads to two undesirable consequences:
 
-1. Overhead of processing beacon chain blocks being too high
-2. The minimum amount of ETH needed to reach a full-sized committee for every shard in every slot (now 32 ETH * 128 committee size * 64 shards per slot * 32 slots per epoch = 8,388,608 ETH) to be too high; we're reasonably confident we can get 8.3m ETH staking, but getting 16.7m ETH staking would be harder, and if we can't get that much, the system would be forced compromise by making cross-shard transactions take longer.
+1. The overhead of processing beacon chain blocks becomes too high
+2. The minimum amount of ETH needed to reach a full-sized committee for every shard in every slot (now 32 ETH * 128 committee size * 64 shards per slot * 32 slots per epoch = 8,388,608 ETH) becomes too high; we're reasonably confident we can get 8.3m ETH staking, but if we increased the number of shards to 128, say, then we'd need to get 16.7m ETH staking; this is significantly harder, and if we were to fall short, the system would be forced to compromise by making cross-shard transactions take longer.
 
 | `TARGET_COMMITTEE_SIZE` | `uint64(2**7)` (= 128) |
 | - | - |
 
-For a committee to be secure, the chance that 2/3 of it get corrupted in any given epoch (assuming <1/3 of the global validator set is made up of attackers) must be astronomically tiny. We can estimate this chance of corruption via binomial formulas:
+For a committee to be secure, the chance that 2/3 of it gets corrupted in any given epoch (assuming <1/3 of the global validator set is made up of attackers) must be astronomically tiny. We can estimate this chance of corruption via binomial formulas:
 
 ```python
 >>> # Factorial
@@ -297,7 +297,8 @@ The goal of rate-limiting entry and exit is to prevent a large portion of malici
 
 With the above numbers, if there is more than 8,388,608 ETH staking, it will take at least 65536/3 epochs, or 10.67 eeks, for 1/3 of validators to withdraw (however, if there is no attack, then the withdrawal queue will ordinarily be short).
 
-The reason to have a long withdrawal delay is to ensure that even a fork that gets hidden from users for a long time and then published to clients that have been offline for some time would lead to slashing. Conceivably, an attacker could escape slashing by hiding a fork for longer than 10.67 eeks; for this reason, we have a rule that clients must go online at least once in that long (in reality a bit less than that) to retain their full security guarantees (this is called **weak subjectivity**).
+The reason to have a long withdrawal delay is to ensure an attacker cannot escape being slashed by hiding a fork from users for a long time, and then publishing it to clients that have been offline for some time. Conceivably, an attacker could escape being slashed by hiding a fork for longer than 10.67 eeks; for this reason, we have a rule that clients must go online at least once every 10.67 eeks (in reality a little less frequently than that) to retain their full security guarantees (this is called **weak subjectivity**).
+
 
 Research:
 
@@ -310,7 +311,7 @@ Research:
 | `SHUFFLE_ROUND_COUNT` | `uint64(90)` |
 | - | - |
 
-Number of rounds in the swap-or-not shuffle; for more into see the [`compute_shuffled_index` function description](#compute_shuffled_index) below. Expert cryptographer advice told us `~4*log2(n)` is sufficient for safety; in our case, `n <= 2**22`, hence ~90 rounds.
+Number of rounds in the swap-or-not shuffle; for more info see the [`compute_shuffled_index` function description](#compute_shuffled_index) below. Expert cryptographer advice told us `~4*log2(n)` is sufficient for safety; in our case, `n <= 2**22`, hence ~90 rounds.
 
 | `MIN_GENESIS_ACTIVE_VALIDATOR_COUNT` | `uint64(2**14)` (= 16,384) |
 | - | - |
@@ -330,9 +331,11 @@ Genesis will not start before this time, even if there are enough validators dep
 | **`HYSTERESIS_UPWARD_MULTIPLIER`** | **`uint64(5)`** |
 | **`EFFECTIVE_BALANCE_INCREMENT`** | **`Gwei(2**0 * 10**9)` (= 1,000,000,000)** |
 
-We store validator balances in two places: (i) the "effective balance" in the validator record, and (ii) the "exact balance" in a separate record. This is done for efficiency reasons: the exact balances get changed due to rewards and penalties in every epoch, so we store them in a compact array that requires rehashing only <32 MB to update. Effective balances (which are used for all other computations that require validator balances) get updated using a **[hysteresis](https://en.wikipedia.org/wiki/Hysteresis)** formula: if the effective balance is `n` ETH, and if the exact balance goes below `n-0.25` ETH, then the effective balance is set to `n-1` ETH, and if the exact balance goes above `n+1.25` ETH the effective balance is set to `n+1` ETH.
+We store validator balances in two places: (i) the "effective balance" in the validator record, and (ii) the "exact balance" in a separate record. This is done for efficiency reasons.
 
-This ensures that an attacker can't make effective balances update every epoch and thus cause processing the chain to become very slow by repeatedly nudging the exact balances above and then below some threshold; instead, the exact balance must change by at least a full 0.5 ETH to trigger an effective balance update.
+The exact balances change every epoch (due to rewards and penalties), so we store them in a compact array that requires rehashing only <32 MB to update, while the effective balances (which are used for all other computations that require validator balances) are updated using a **[hysteresis](https://en.wikipedia.org/wiki/Hysteresis)** formula: if the effective balance is `n` ETH, and if the exact balance goes below `n-0.25` ETH, then the effective balance is set to `n-1` ETH, and if the exact balance goes above `n+1.25` ETH the effective balance is set to `n+1` ETH.
+
+Since the exact balance must change by at least a full 0.5 ETH to trigger an effective balance update, this ensures an attacker can't make effective balances update every epoch -- and thus cause processing the chain to become very slow -- by repeatedly nudging the exact balances above, and then below, some threshold.
 
 ### Gwei values
 
