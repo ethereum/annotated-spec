@@ -63,7 +63,6 @@ _See also: the [annotated sync protocol spec](./sync-protocol.md)._
 
 ## Introduction
 
-Altair is the first beacon chain hard fork. Its main features are:
 Altair is the first hard fork of the Ethereum beacon chain. Its main features are:
 
 * "**Sync committees**", which allow light clients to easily sync up with the header chain with very low computational and data cost. The goal is to make a light client easy and efficient enough that it can be run inside any environment (mobile device, embedded hardware, browser extension, and even inside another smart-contract-capable blockchain)
@@ -444,7 +443,7 @@ The Altair approach is more efficient: it stores a bitfield (1 byte per active v
 
 #### `get_attestation_participation_flag_indices`
 
-```
+```python
 def get_attestation_participation_flag_indices(state: BeaconState,
                                                data: AttestationData,
                                                inclusion_delay: uint64) -> Sequence[int]:
