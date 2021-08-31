@@ -172,9 +172,9 @@ This patch updates a few configuration values to move penalty parameters closer 
 | Name | Value |
 | - | - |
 | `SYNC_COMMITTEE_SIZE` | `uint64(2**9)` (= 512) |
-| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**9)` (= 512) | epochs | ~54 hours |
+| `EPOCHS_PER_SYNC_COMMITTEE_PERIOD` | `Epoch(2**8)` (= 256) | epochs | ~27 hours |
 
-The sync committee is set to 512 validators, a relatively large and conservative size (compared to attestation and later shard proposal committees) to ensure safety. A sync committee is chosen once every ~2 days. Shorter periods would increase data load on light clients as they would need to sync more frequently, and longer periods would leave open too much opportunity to discover and corrupt committee members; ~2 days was chosen as the happy medium that fares reasonably well on both dimensions.
+The sync committee is set to 512 validators, a relatively large and conservative size (compared to attestation and later shard proposal committees) to ensure safety. A sync committee is chosen once every ~1 day. Shorter periods would increase data load on light clients as they would need to sync more frequently, and longer periods would leave open too much opportunity to discover and corrupt committee members; ~1 day was chosen as the happy medium that fares reasonably well on both dimensions.
 
 ### Misc
 

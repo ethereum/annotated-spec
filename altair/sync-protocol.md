@@ -28,7 +28,7 @@
 
 ## Introduction
 
-The **sync committee** is the "flagship feature" of the Altair hard fork. This is a committee of 512 validators that is randomly selected every **sync committee period (~2 days)**, and while a validator is part of the currently active sync committee they are expected to continually sign the block header that is the new head of the chain at each slot.
+The **sync committee** is the "flagship feature" of the Altair hard fork. This is a committee of 512 validators that is randomly selected every **sync committee period (~1 day)**, and while a validator is part of the currently active sync committee they are expected to continually sign the block header that is the new head of the chain at each slot.
 
 The purpose of the sync committee is to allow **light clients** to keep track of the chain of beacon block headers. The other two duties that involve signing block headers, block proposal and block attestation, do not work for this function because computing the proposer or attesters at a given slot requires a calculation on the entire active validator set, which light clients do not have access to (if they did, they would not be light!). Sync committees, on the other hand, are (i) updated infrequently, and (ii) saved directly in the beacon state, allowing light clients to verify the sync committee with a Merkle branch from a block header that they already know about, and use the public keys in the sync committee to directly authenticate signatures of more recent blocks.
 
@@ -130,7 +130,7 @@ The `snapshot` can be updated in two ways:
 1. If the light client sees a valid `LightClientUpdate` containing a `finality_header`, and with at least 2/3 of the sync committee participating, it accepts the `update.header` as the new snapshot header. Note that the light client uses the signature to verify `update.finality_header` (which would in practice often be one of the most recent blocks, and not yet finalized), and then uses the Merkle branch _from_ the `update.finality_header` _to_ the finalized checkpoint in its post-state to verify the `update.header`. If `update.finality_header` is a valid block, then `update.header` actually is finalized.
 2. If the light client sees no valid updates via method (1) for a sufficiently long duration (specifically, the length of one sync committee period), it simply accepts the speculative header in `valid_updates` with the most signatures as finalized.
 
-(2) allows the light client to keep advancing even during periods of extended non-finality, though at the cost that during a long non-finality period the light client's safety is vulnerable to network altency of ~2 days (full clients' safety is only vulnerable to network latency on the order of weeks).
+(2) allows the light client to keep advancing even during periods of extended non-finality, though at the cost that during a long non-finality period the light client's safety is vulnerable to network latency of ~1 day (full clients' safety is only vulnerable to network latency on the order of weeks).
 
 ## Helper functions
 
