@@ -13,6 +13,7 @@ Currently the following parts of the spec are available in annotated form:
 ### Merge
 
 * [Beacon chain changes](merge/beacon-chain.md)
+* [Fork choice (terminal PoW block verification](merge/fork-choice.md)
 
 ### Sharding
 
