@@ -10,6 +10,10 @@ Currently the following parts of the spec are available in annotated form:
 * [Changes to the beacon chain](altair/beacon-chain.md)
 * [Light client sync protocol](altair/sync-protocol.md)
 
-### Phase 1
+### Merge
+
+* [Beacon chain changes](merge/beacon-chain.md)
+
+### Sharding
 
 * [Changes to the beacon chain](phase1/beacon-chain.md)
