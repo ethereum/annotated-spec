@@ -81,7 +81,7 @@ The beacon chain uses [SSZ](https://github.com/ethereum/consensus-specs/blob/dev
 | `MIN_GAS_LIMIT` | `uint64(5000)` (= 5,000) |
 | `MAX_EXTRA_DATA_BYTES` | `2**5` (= 32) |
 
-The `GAS_LIMIT_DENOMINATOR` is the inverse of the max fraction by which a block's gas limit can change per block. This is identical to the gas limit voting mechanism on the execution chain.
+The `GAS_LIMIT_DENOMINATOR` is the inverse of the max fraction by which a block's gas limit can change per block. This is identical to the gas limit voting mechanism on the execution chain. The max bytes per transaction and max transactions per payload are expected to be changed; the intent is for the limits to merely be there because the SSZ structures require _some_ max depth, and the execution chain gas limit is intended to set the actual limits.
 
 ## Configuration
 
