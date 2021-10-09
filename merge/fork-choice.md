@@ -23,16 +23,11 @@
 
 ## Introduction
 
-This is the modification of the beacon chain fork choice for the merge. There is only one significant change made: the additional requirement to verify that the terminal block is valid.
+This is the modification of the beacon chain fork choice for the merge. There is only one significant change made: the additional requirement to verify that the terminal PoW block is valid.
 
 ## Protocols
 
 ### `ExecutionEngine`
-
-*Note*: The `notify_forkchoice_updated` function is added to the `ExecutionEngine` protocol to signal the fork choice updates.
-
-The body of this function is implementation dependent.
-The Engine API may be used to implement it with an external execution engine.
 
 #### `notify_forkchoice_updated`
 
@@ -45,7 +40,7 @@ def notify_forkchoice_updated(self: ExecutionEngine, head_block_hash: Hash32, fi
 
 ## Helpers
 
-This section provides the method for computing whether or not a PoW execution block referenced as a parent of the first embedded block is a valid terminal block. In addition for simply checking that the terminal block is available and has been validated by the execution client, which the [post-merge beacon chain spec](./beacon-chain.md) already does implicitly, we need to check that it's a _valid_ terminal block.
+This section provides the method for computing whether or not a PoW execution block referenced as a parent of the first embedded block is a valid terminal block. In addition for simply checking that the terminal PoW block is available and has been validated by the execution client, which the [post-merge beacon chain spec](./beacon-chain.md) already does implicitly, we need to check that it's a _valid_ terminal PoW block.
 
 ### `PowBlock`
 
@@ -63,7 +58,7 @@ Let `get_pow_block(block_hash: Hash32) -> PowBlock` be the function that given t
 
 ### `is_valid_terminal_pow_block`
 
-There are two ways in which a block can be a valid terminal block. First (and this is the normal case), it could be a PoW block that reaches the `TERMINAL_TOTAL_DIFFICULTY`. Note that only blocks _immediately_ past the `TERMINAL_TOTAL_DIFFICULTY` threshold (so, blocks whose parents are still below it) are allowed; this is part of a general rule that terminal PoW blocks can only have embedded execution blocks as valid children. Second (and this is an exceptional case to be configured only in the event of an attack or other emergency), the terminal PoW block can be chosen explicitly via its hash.
+There are two ways in which a block can be a valid terminal PoW block. First (and this is the normal case), it could be a PoW block that reaches the `TERMINAL_TOTAL_DIFFICULTY`. Note that only blocks _immediately_ past the `TERMINAL_TOTAL_DIFFICULTY` threshold (so, blocks whose parents are still below it) are allowed; this is part of a general rule that terminal PoW blocks can only have embedded execution blocks as valid children. Second (and this is an exceptional case to be configured only in the event of an attack or other emergency), the terminal PoW block can be chosen explicitly via its hash.
 
 ```python
 def is_valid_terminal_pow_block(block: PowBlock, parent: PowBlock) -> bool:
