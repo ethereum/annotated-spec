@@ -91,7 +91,7 @@ The total theoretical long-run average reward per epoch that a validator can get
 
 The base reward is split up into pieces where each piece is allocated to one of these duties:
 
-![](duties.png)
+![](https://i.imgur.com/dSBhZgz.png)
 
 Each piece is represented as a fraction `X / WEIGHT_DENOMINATOR`, where `WEIGHT_DENOMINATOR = 64`; the `X` values for the various pieces sum up to 64, making up a full base reward.
 
@@ -130,10 +130,10 @@ These are the positions in the `ParticipationFlags` bitfield at which we track w
 
 | Name | Value |
 | - | - |
-| `TIMELY_HEAD_WEIGHT` | `uint64(12)` |
-| `TIMELY_SOURCE_WEIGHT` | `uint64(12)` |
-| `TIMELY_TARGET_WEIGHT` | `uint64(24)` |
-| `SYNC_REWARD_WEIGHT` | `uint64(8)` |
+| `TIMELY_HEAD_WEIGHT` | `uint64(14)` |
+| `TIMELY_SOURCE_WEIGHT` | `uint64(14)` |
+| `TIMELY_TARGET_WEIGHT` | `uint64(26)` |
+| `SYNC_REWARD_WEIGHT` | `uint64(2)` |
 | `PROPOSER_WEIGHT` | `uint64(8)` |
 | `WEIGHT_DENOMINATOR` | `uint64(64)` |
 
@@ -592,7 +592,7 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
     process_randao(state, block.body)
     process_eth1_data(state, block.body)
     process_operations(state, block.body)  # [Modified in Altair]
-    process_sync_committee(state, block.body.sync_aggregate)  # [New in Altair]
+    process_sync_aggregate(state, block.body.sync_aggregate)  # [New in Altair]
 ```
 
 #### Modified `process_attestation`
@@ -643,7 +643,7 @@ Note also some new special logic for the proposer rewards: the proposer reward f
 
 The mathematical reasoning here is subtle. Here is the chart for how rewards are allocated in Altair (not including whistleblower-related rewards as those fall outside the base reward schema). All rewards add up to a theoretical max of a full `base_reward`. `7/8` of the chart is allocated to non-proposal duties. The remaining `1/8` is allocated to proposer rewards, and is split up proportionately to the rewards for the thing that the proposer is including.
 
-![](piechart.png)
+![](https://i.imgur.com/8TKi4P8.png)
 
 For example, we can focus on the `TIMELY_HEAD` duty. If you as a validator make an attestation to the correct head, and get it included in the next slot, you get the `TIMELY_HEAD` reward: `12/64` of a base reward. But we could instead think of it as _`12/56` of the non-proposal rewards_, where in turn the non-proposal rewards account for `56/64` (or `7/8`) of the whole pie. The proposer slice of the pie is allocated in the same proportions as the non-proposer slice of the pie: the proposer that _includes_ your timely-head attestation gets _`12/56` of the proposal rewards_ as a reward for doing so. If everyone (including the proposers) perform perfectly at everything, the non-proposer rewards add up to `56/64` of the base reward, and the proposer rewards themselves add up to `56/56` of the `8/64` proposer share (ie. the entire remaining `8/64` of the base reward), and so the combined rewards to everyone are exactly a full base reward.
 
@@ -693,7 +693,7 @@ def process_deposit(state: BeaconState, deposit: Deposit) -> None:
 #### Sync committee processing
 
 ```python
-def process_sync_committee(state: BeaconState, aggregate: SyncAggregate) -> None:
+def process_sync_aggregate(state: BeaconState, aggregate: SyncAggregate) -> None:
     # Verify sync committee aggregate signature signing over the previous slot block root
     committee_pubkeys = state.current_sync_committee.pubkeys
     participant_pubkeys = [pubkey for pubkey, bit in zip(committee_pubkeys, aggregate.sync_committee_bits) if bit]
@@ -709,20 +709,24 @@ def process_sync_committee(state: BeaconState, aggregate: SyncAggregate) -> None
     participant_reward = Gwei(max_participant_rewards // SYNC_COMMITTEE_SIZE)
     proposer_reward = Gwei(participant_reward * PROPOSER_WEIGHT // (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
 
-    # Apply participant and proposer rewards
+    # Apply participant and proposer rewards and non-participant penalties
     all_pubkeys = [v.pubkey for v in state.validators]
     committee_indices = [ValidatorIndex(all_pubkeys.index(pubkey)) for pubkey in state.current_sync_committee.pubkeys]
-    participant_indices = [index for index, bit in zip(committee_indices, aggregate.sync_committee_bits) if bit]
-    for participant_index in participant_indices:
-        increase_balance(state, participant_index, participant_reward)
-        increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
+    for participant_index, participation_bit in zip(committee_indices, sync_aggregate.sync_committee_bits):
+        if participation_bit:
+            increase_balance(state, participant_index, participant_reward)
+            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
+        else:
+            decrease_balance(state, participant_index, participant_reward)
 ```
 
 This function verifies that the sync committee included in the block is correct, and computes and applies the rewards for participants. The signature verification logic is simple: sync committee members are expected to sign the block header, and the signing root is computed from the block header root and the domain (much like all BLS signatures in the beacon chain protocol sign messages with domains attached for anti-replay-rpotection reasons). The signature is verified against the subset of sync committee members that participated, which can be determined from the sync committee and the bitfield.
 
-There is some subtlety in correctly computing the rewards. The goal is for maximum possible total sync committee rewards to equal `8/64` of the base reward for the _total_ validator set (so that _in the long term, on average_, a perfectly participating validator gets `8/64` of the base reward per epoch for their sync committee participation. The base reward itself is per-epoch, and sync committees are per-slot, so to get the total reward per-slot, we take the total base reward and further divide it by `SLOTS_PER_EPOCH`. This gives us `max_participant_rewards`, the maximum possible combined reward to the whole sync committee in one slot.
+There is some subtlety in correctly computing the rewards. The goal is for maximum possible total sync committee rewards to equal `2/64` of the base reward for the _total_ validator set (so that _in the long term, on average_, a perfectly participating validator gets `2/64` of the base reward per epoch for their sync committee participation. The base reward itself is per-epoch, and sync committees are per-slot, so to get the total reward per-slot, we take the total base reward and further divide it by `SLOTS_PER_EPOCH`. This gives us `max_participant_rewards`, the maximum possible combined reward to the whole sync committee in one slot.
 
 We get the `participant_reward` (the reward to each participant) by dividing the `max_participant_rewards` by the size of the committee. Proposer rewards for including signatures are set to `8/56` of the rewards for producing the signatures, [just like in the rest of the protocol](#aside-proposer-rewards-in-altair).
+
+Note the decision to apply online rewards _and_ offline penalties for sync committee membership. This decision was taken because it reduces the variance in rewards that a validator gets, while keeping the same incentive for participating vs not participating.
 
 ### Epoch processing
 
