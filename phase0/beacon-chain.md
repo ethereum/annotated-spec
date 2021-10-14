@@ -387,7 +387,11 @@ When the deposit count becomes sufficient for the eth2 chain to start, the start
 
 A tradeoff between blockchain speed and risk. Note that in future phases, multiple steps will have to happen within a slot: beacon block -> shard block -> beacon block, as well as eventually a round of data availability sampling, so it is good to be conservative.
 
+<div style="background-color:white">
+
 ![](../images/singleslot.png)
+  
+</div>
 
 Eth1 latency is generally ~1 second; 12 seconds gives a healthy safety margin on top of this.
 
