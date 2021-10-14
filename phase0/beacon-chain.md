@@ -387,12 +387,8 @@ When the deposit count becomes sufficient for the eth2 chain to start, the start
 
 A tradeoff between blockchain speed and risk. Note that in future phases, multiple steps will have to happen within a slot: beacon block -> shard block -> beacon block, as well as eventually a round of data availability sampling, so it is good to be conservative.
 
-<div style="background-color:white">
-
-![](../images/singleslot.png)
+![](https://i.imgur.com/GrcYHKS.png)
   
-</div>
-
 Eth1 latency is generally ~1 second; 12 seconds gives a healthy safety margin on top of this.
 
 | `SECONDS_PER_ETH1_BLOCK` | `uint64(14)` | seconds | 14 seconds |
@@ -429,7 +425,7 @@ To fully prevent this type of manipulation, we use a mechanism where the validat
 
 We update the seed (or rather, the **randao mix**, which is used to generate the seed) every block using a mechanism inspired by [RANDAO](https://github.com/randao/randao): the proposer of a block provides a hash that gets mixed into (ie. XOR'd into) the seed; this hash is unknown to the public ahead of time, but it is pre-committed, in the sense that there is only one valid hash that the proposer could submit. This is done with by BLS-signing the current epoch; the BLS signature scheme has the property that for any given key there is exactly one valid signature for any given message (as opposed to eg. ECDSA where there are many possible valid signatures that can be made with the same key for the same message).
 
-![](../images/randomness.png)
+![](https://i.imgur.com/FmWKL0C.png)
 
 The randao mix at the start of epoch N is used to compute the seed for epoch N+1; this ensures that the proposer and committee roles are known one epoch ahead of time, giving validators a chance to prepare.
 
