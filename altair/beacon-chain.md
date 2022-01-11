@@ -139,6 +139,18 @@ These are the positions in the `ParticipationFlags` bitfield at which we track w
 
 Reward weights for each duty (see [here](#aside-validator-duties-rewards-and-penalties) for a more detailed description of this concept).
 
+### Aside: what is the break-even uptime?
+
+Assume there are two kinds of validators, (i) fully functioning online validators, and (ii) offline validators, with portion `p` fully functioning and online. Then, a fully functioning online validator's reward will be roughly `B * (50/64 * p + 14/64 * p**2)`, where `B` is the max possible reward. This can be analyzed as follows.
+
+First, consider the `56/64` attestation rewards and ignore the `8/64` proposer rewards. All of these rewards get multiplied by `p` because of the collective reward mechanism (see [this section](https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#helpers) for the reasoning behind collective rewards). However, the `14/64` of that corresponding to the `TIMELY_HEAD_WEIGHT` gets multiplied by `p` again because you can only get timely head rewards if they are included in the next block, so if after you attest the next proposer is missing you cannot get those rewards (fortunately, the timely head duty is [exempt from penalties](https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#get_flag_index_deltas). Hence, so far we have `42/64 * p + 14/64 * p**2`.
+
+Now, we add proposer rewards. Proposer rewards are a fraction of the rewards of the attestations you are including. In this case, because you are the proposer, we don't need to worry about the possibility of missing proposers, and so you're just getting all revenue multiplied by `p`. So adding proposer rewards, we're up to `50/64 * p + 14/64 * p**2`.
+
+If you are offline, then your rewards are roughly `-42/64 * B` (failing a timely head duty or a proposer duty [does not trigger] a penalty), unless `p < 2/3` in which case you quickly lose much more because of an inactivity leak.
+
+If you are offline with probability `q`, then your rewards are `B * [(50/64 * p + 14/64 * p**2) * q - 42/64 * (1-q)]`, which simplifies to `B * [(42/64 + 50/64 * p + 14/64 * p**2) * q - 42/64]`. If `p` and `q` are both close to 1, then this simplifies to `B * (1 - 106/64 * (1-q) - 78/64 * (1-p))`. Hence, if _all_ other nodes are online, the uptime at which you break even is `42/106` (~39.6%). The break-even uptime for _the whole network_ (so, the minimum profitable uptime if you assume that _all_ nodes have that uptime, ie. `p = q`) is 2/3 (because at `p = 2/3` the reward is ~B * 0.2 and at `p < 2/3` the inactivity leak starts).
+
 ### Misc
 
 | Name | Value |
