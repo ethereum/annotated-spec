@@ -532,7 +532,7 @@ def compute_shard_from_committee_index(state: BeaconState, index: CommitteeIndex
     return Shard((index + get_start_shard(state, slot)) % active_shards)
 ```
 
-If there is more than 8,388,608 ETH validating (= 32 ETH per validator * 64 shards * 32 shards per epoch * 128 validators per committee), them in every slot there will be a committee for each of the 64 shards. If there is less than this amount of ETH validating, then we assign less than 64 committees per slot, which means that not every shard will be eligible for a crosslink in every slot. If this happens, we rotate through the shards; for example, if there are 25 committees per slot, then slot 0 would be eligible to have crosslinks for shards 0...24, slot 1 for shards 25...49, and slot 2 for shards 50...63 and wrapping around to 0...10, etc.
+If there is more than 8,388,608 ETH validating (= 32 ETH per validator * 64 shards * 32 slots per epoch * 128 validators per committee), them in every slot there will be a committee for each of the 64 shards. If there is less than this amount of ETH validating, then we assign less than 64 committees per slot, which means that not every shard will be eligible for a crosslink in every slot. If this happens, we rotate through the shards; for example, if there are 25 committees per slot, then slot 0 would be eligible to have crosslinks for shards 0...24, slot 1 for shards 25...49, and slot 2 for shards 50...63 and wrapping around to 0...10, etc.
 
 This function converts the index of a committee (are we talking about the zeroth committee, the first, the fifth, the twelfth?) into which shard that committee is responsible for at the given slot.
 
