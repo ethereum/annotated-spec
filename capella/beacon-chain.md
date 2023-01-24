@@ -1,4 +1,6 @@
-# Capella -- The Beacon Chain
+# Capella Beacon chain changes
+
+This is an annotated version of the Capella beacon chain spec. 
 
 ## Table of contents
 
@@ -45,18 +47,13 @@
 
 ## Introduction
 
-Capella is a consensus-layer upgrade containing a number of features related
-to validator withdrawals. Including:
-* Automatic withdrawals of `withdrawable` validators.
-* Partial withdrawals sweep for validators with 0x01 withdrawal
-  credentials and balances in excess of `MAX_EFFECTIVE_BALANCE`.
-* Operation to change from `BLS_WITHDRAWAL_PREFIX` to
-  `ETH1_ADDRESS_WITHDRAWAL_PREFIX` versioned withdrawal credentials to enable withdrawals for a validator.
+Capella is a consensus-layer upgrade containing a number of features related to validator withdrawals. Including:
 
-Another new feature is the new independent state and block historical accumulators
-that replace the original singular historical roots. With these accumulators, it becomes possible to validate
-the entire block history that led up to that particular state without any additional information
-beyond the state and the blocks.
+* **Automatic withdrawals of `withdrawable` validators**. It has been possible for a long time for validators to enter the `withdrawable` state. However, the functionality to actually withdraw validator balances has not yet been available. Capella, together with the Shanghai upgrade for the execution spec, finally adds the functionality that allows for withdrawals to process.
+* **Conversion to ETH-address-based withdrawals**. There are currently two types of withdrawal credentials that validators can have, defined by the first byte in the validator's `withdrawal_credentials`: `0x00` (withdrawal controlled by BLS pubkey) and `0x01` (the validator's balance withdraws to a specific ETH address). Capella adds a feature that lets `0x00` validators convert to `0x01`.
+* **Partial withdrawals**: validators with `0x01` withdrawal credentials and balances above 32 ETH get their excess balance withdrawn to their address. A "sweeping" procedure cycles through the full set of validators and reaches each validator once every ~4-8 days.
+
+Capella also makes a small technical change to how historical block and state root summaries are stored, to make it slightly easier for a node to verify things about ancient history that it no longer stores (or did not download yet because it fast-synced).
 
 ## Custom types
 
