@@ -35,6 +35,7 @@ This is an annotated version of the Capella beacon chain spec.
   - [Epoch processing](#epoch-processing)
     - [Historical summaries updates](#historical-summaries-updates)
   - [Block processing](#block-processing)
+    - [Aside: how withdrawal processing works](#aside-how-withdrawal-processing-works)
     - [New `get_expected_withdrawals`](#new-get_expected_withdrawals)
     - [New `process_withdrawals`](#new-process_withdrawals)
     - [Modified `process_execution_payload`](#modified-process_execution_payload)
@@ -357,7 +358,7 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
     process_sync_aggregate(state, block.body.sync_aggregate)
 ```
 
-### Aside: how withdrawal processing works
+#### Aside: how withdrawal processing works
 
 _This describes the logic implemented in `get_expected_withdrawals` and `process_withdrawals` below, and the logic on the execution client side ([EIP-4895](https://eips.ethereum.org/EIPS/eip-4895)) to accept the withdrawals._
 
