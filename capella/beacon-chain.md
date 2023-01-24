@@ -63,6 +63,8 @@ We define the following Python custom types for type hinting and readability:
 | - | - | - |
 | `WithdrawalIndex` | `uint64` | an index of a `Withdrawal` |
 
+This is just a counter that stores the (global) index of the withdrawal. The first withdrawal that ever happens will have index 0, the second will have index 1, etc. This is not strictly necessary for the spec to work, but it was added for convenience, so that each withdrawal could have a clear "transaction ID" that can be used to refer to it (just hashing withdrawal contents would not work, as there may be multiple withdrawals with the exact same contents).
+
 ### Domain types
 
 | Name | Value |
@@ -77,6 +79,8 @@ We define the following Python custom types for type hinting and readability:
 | - | - |
 | `MAX_BLS_TO_EXECUTION_CHANGES` | `2**4` (= 16) |
 
+A maximum of 16 operations that convert a `0x00` (withdraw-by-BLS-key) account to a `0x01` (withdraw-to-ETH-address) account can be included in each block.
+
 ### Execution
 
 | Name | Value | Description |
@@ -88,6 +92,8 @@ We define the following Python custom types for type hinting and readability:
 | Name | Value |
 | - | - |
 | `MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP` | `16384` (= 2**14 ) |
+
+The sweeping mechanism walks through a maximum of this many validators to look for potential withdrawals.
 
 ## Containers
 
@@ -103,6 +109,8 @@ class Withdrawal(Container):
     amount: Gwei
 ```
 
+This is the object that contains withdrawals. Withdrawals are special because they move funds from the consensus side to the execution side, and so implementing them requires interaction between the two. There was a technical debate about whether to include withdrawals in the body at all: theoretically, one could imagine a design where the consensus portion of a block is processed first, it generates the list of withdrawals, and then that list is passed directly to the execution client and processed, without ever being serialized anywhere. It was ultimately decided to include the list of withdrawals in the `ExecutionPayload` (the portion of the block that goes to the execution client), because this strengthens modularity and separation of concerns, and particuarly allows for execution validity and consensus validity to be verified in an arbitrary order, with one shooting far ahead of the other.
+
 #### `BLSToExecutionChange`
 
 ```python
@@ -111,6 +119,8 @@ class BLSToExecutionChange(Container):
     from_bls_pubkey: BLSPubkey
     to_execution_address: ExecutionAddress
 ```
+
+This is the object that represents a validator's desire to upgrade from `0x00` (withdraw-by-BLS-key) to `0x01` (withdraw-to-ETH-address) withdrawal credentials. It needs to be signed (see `SignedBLSToExecutionChange` below) by the BLS key that is hashed in the original withdrawal credentials. The BLS key used to sign is the `from_bls_pubkey`, and we check that `hash(from_bls_pubkey)[1:] == validator.withdrawal_credentials[1:]` when processing a `BLSToExecutionChange` to verify that this is actually the key that was originally committed to.
 
 #### `SignedBLSToExecutionChange`
 
@@ -131,6 +141,12 @@ class HistoricalSummary(Container):
     block_summary_root: Root
     state_summary_root: Root
 ```
+
+See [the phase0 spec](../phase0/beacon-chain.md#slots_per_historical_root) for how historical roots worked pre-Capella. To summarize, after each 8192-slot period, we would append a hash of the last 8192 block roots and 8192 state roots to an ever-growing structure in the state that stores these hashes. This gives us a data structure that we could use to Merkle-prove historical facts about old history or state.
+
+Here, we change it to store _two_ roots per period instead of one, storing the root of block roots and the root of state roots separately. This allows us to generate proofs about blocks without knowing anything about historical states, and to generate proofs about states without knowing anything about historical blocks. When the two were merged, a Merkle proof about one of the two structures would have to end with the Merkle root of the other structure because that's the final sister node in the path. Here, this requirement is removed. This is particularly valuable in the sync process, as it allows fast-synced nodes to download and verify batches of 8192 historical blocks without needing anyone to keep a separate data structure that tracks old states.
+
+We replace the `historical_roots` object, which stores one root per period, with a `historical_summaries` object, which stores a `HistoricalSummary` containing two roots (the root-of-block-roots and root-of-state-roots) per period. Because we do not actually have the old roots-of-block-roots and roots-of-state-roots in the spec, we unfortunately cannot replace the old historical roots; hence, for now, we keep them around and have two separate structures, the older one frozen, but in a future fork we may well re-merge them.
 
 ### Extended Containers
 
