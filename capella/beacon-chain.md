@@ -303,6 +303,8 @@ def is_partially_withdrawable_validator(validator: Validator, balance: Gwei) -> 
     return has_eth1_withdrawal_credential(validator) and has_max_effective_balance and has_excess_balance
 ```
 
+If a validator with a `0x01` withdrawal credential has more than 32 ETH, their "excess" ETH is eligible to be automatically withdrawn to their specified withdrawal address.
+
 ## Beacon chain state transition function
 
 ### Epoch processing
@@ -339,6 +341,8 @@ def process_historical_summaries_update(state: BeaconState) -> None:
         state.historical_summaries.append(historical_summary)
 ```
 
+Extends the historical summaries list. Similar to the `historical_batch`-related logic in the [Final updates section](https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#final-updates) of the pre-Capella spec.
+
 ### Block processing
 
 ```python
@@ -352,6 +356,18 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
     process_operations(state, block.body)  # [Modified in Capella]
     process_sync_aggregate(state, block.body.sync_aggregate)
 ```
+
+### Aside: how withdrawal processing works
+
+_This describes the logic implemented in `get_expected_withdrawals` and `process_withdrawals` below, and the logic on the execution client side ([EIP-4895](https://eips.ethereum.org/EIPS/eip-4895)) to accept the withdrawals._
+
+To detect accounts eligible for (full or partial) withdrawals, a "sweeping" process cycles through the entire list of validators. The current location of the sweep is stored in `state.next_withdrawal_validator_index`; during the processing of a block, the sweep walks through the validator list starting from that point, going back to the start of the list if it reaches the end.
+
+During one block, the sweep continues until it either (i) sweeps through `MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP` validators, or, more commonly, (ii) discovers enough withdrawals to completely fill the `withdrawals` list and terminates early. The sweep checks for two types of withdrawable accounts: **full withdrawals**, where a validator has ETH and is `withdrawable`, and **partial withdrawals**, where a validator has more than 32 ETH, and so the excess can be withdrawn. In both cases, an additional condition is enforced that the validator must have a `0x01` (withdraw-to-ETH-address) withdrawal credential, which ensures that we know what ETH address the validator's (either total or excess) funds should be withdrawn to.
+
+If the sweep discovers a validator that is eligible for a withdrawal, it constructs a `Withdrawal` object of the appropriate type, and adds it to the list. Once the sweep is complete, the `process_withdrawals` function first checks that the _generated_ list of withdrawals equals the _declared_ list of withdrawals in the `ExecutionPayload`, and then processes the withdrawals, decreasing the balances of withdrawn validators by the amount in the `Withdrawal` (in practice, partial withdrawals decrease to 32 ETH, and full withdrawals decrease to 0 ETH).
+
+On the execution side, [EIP-4895](https://eips.ethereum.org/EIPS/eip-4895) introduces the rule that after all transactions are processed, the balances of ETH addresses mentioned in withdrawals get increased by the amounts specified by those withdrawals.
 
 #### New `get_expected_withdrawals`
 
