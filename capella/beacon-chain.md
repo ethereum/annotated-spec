@@ -110,7 +110,7 @@ class Withdrawal(Container):
     amount: Gwei
 ```
 
-This is the object that contains withdrawals. Withdrawals are special because they move funds from the consensus side to the execution side, and so implementing them requires interaction between the two. There was a technical debate about whether to include withdrawals in the body at all: theoretically, one could imagine a design where the consensus portion of a block is processed first, it generates the list of withdrawals, and then that list is passed directly to the execution client and processed, without ever being serialized anywhere. It was ultimately decided to include the list of withdrawals in the `ExecutionPayload` (the portion of the block that goes to the execution client), because this strengthens modularity and separation of concerns, and particuarly allows for execution validity and consensus validity to be verified in an arbitrary order, with one shooting far ahead of the other.
+This is the object that contains withdrawals. Withdrawals are special because they move funds from the consensus layer to the execution layer, and so implementing them requires interaction between the two. There was a technical debate about whether to include withdrawals in the body at all: theoretically, one could imagine a design where the consensus portion of a block is processed first, it generates the list of withdrawals, and then that list is passed directly to the execution client and processed, without ever being serialized anywhere. It was ultimately decided to include the list of withdrawals in the `ExecutionPayload` (the portion of the block that goes to the execution client), because this strengthens modularity and separation of concerns, and particuarly allows for execution validity and consensus validity to be verified in an arbitrary order, with one shooting far ahead of the other.
 
 #### `BLSToExecutionChange`
 
@@ -291,6 +291,8 @@ def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: 
         and balance > 0
     )
 ```
+
+If a validator with a `0x01` withdrawal credential has reached their withdrawability epoch and has more than 0 ETH, their total balance is eligible to be automatically withdrawn to their specified withdrawal address.
 
 #### `is_partially_withdrawable_validator`
 
