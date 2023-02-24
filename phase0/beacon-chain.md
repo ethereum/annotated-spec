@@ -247,10 +247,10 @@ Here, we have configurable constants, ie. if you adjust one of these up or down 
 
 ### Misc
 
-| `ETH1_FOLLOW_DISTANCE` | `uint64(2**10)` (= 1,024) |
+| `ETH1_FOLLOW_DISTANCE` | `uint64(2**11)` (= 2,048) |
 | - | - |
 
-To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 1,024` blocks). Assuming the eth1 chain does not revert that far, this lets us rely on the following assumption: if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 1024 blocks correspond to a delay of ~3.7 hours (note that getting an eth1 block _accepted_ into eth2 takes another ~1.7 hours). Historically, all problems on the eth1 net have been responded to within this period of time. Stretching this time period further would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
+To process eth1 deposits, the eth2 chain tracks block hashes of the eth1 chain. To simplify things, the eth2 chain only pays attention to eth1 blocks after a delay (`ETH1_FOLLOW_DISTANCE = 2,048` blocks). Assuming the eth1 chain does not revert that far, this lets us rely on the following assumption: if the eth2 sees an eth1 block it won't "un-see" it (if eth1 does revert that far, emergency action will be required on the eth2 side). 2048 ETH1 blocks correspond to a delay of ~8 hours (`SECONDS_PER_ETH1_BLOCK = 14` seconds) followed by a voting period ~6.8 hours and after reaching the front of the activation queue an additional ~31 minutes is needed for the validator to be fully activated. Historically, all problems on the eth1 net have been responded to within this period of time. Stretching this time period further would (i) increase deposit delays and (ii) make eth2 less convenient as a light client of eth1.
 
 | `MAX_COMMITTEES_PER_SLOT` | `uint64(2**6)` (= 64) |
 | - | - |
@@ -446,10 +446,10 @@ The `MAX_SEED_LOOKAHEAD` is actually the minimum delay on validator activations 
 
 See [here](#inactivity-quotient) for what the inactivity leak is; this constant simply says that the leaking starts after 4 epochs of non-finality.
 
-| `EPOCHS_PER_ETH1_VOTING_PERIOD` | `uint64(2**5)` (= 32) | epochs | ~3.4 hours |
+| `EPOCHS_PER_ETH1_VOTING_PERIOD` | `uint64(2**6)` (= 64) | epochs | ~6.8 hours |
 | - | - | :-: | :-: |
 
-The eth2 chain learns about eth1 blocks (so that it can verify Merkle proofs of deposits) via a voting mechanism where block proposers vote on an eth1 block; the [honest validator guide](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/validator.md#eth1-data) details which block validators choose. The voting period is set to 1024 slots to ensure a sufficient committee size and to give time to respond to potential failures; additionally, there is little value in the voting period being much shorter than the `ETH1_FOLLOW_DISTANCE` (also ~3.7 hours).
+The eth2 chain learns about eth1 blocks (so that it can verify Merkle proofs of deposits) via a voting mechanism where block proposers vote on an eth1 block; the [honest validator guide](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/validator.md#eth1-data) details which block validators choose. The voting period is set to 64 epochs to ensure a sufficient committee size and to give time to respond to potential failures; additionally, there is little value in the voting period being much shorter than the `ETH1_FOLLOW_DISTANCE` (2048 Eth1 blocks or ~8 hours).
 
 <a id="slots_per_historical_root" />
 
