@@ -17,7 +17,7 @@ Currently the following parts of the spec are available in annotated form:
 
 ### Capella (Withdrawals)
 
-* [Beacon chain changes](capella/beacon-chain.md) (work in progress)
+* [Beacon chain changes](capella/beacon-chain.md)
 
 ### Sharding
 
