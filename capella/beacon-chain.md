@@ -51,8 +51,8 @@ This is an annotated version of the Capella beacon chain spec.
 Capella is a consensus-layer upgrade containing a number of features related to validator withdrawals. Including:
 
 * **Automatic withdrawals of `withdrawable` validators**. It has been possible for a long time for validators to enter the `withdrawable` state. However, the functionality to actually withdraw validator balances has not yet been available. Capella, together with the Shanghai upgrade for the execution spec, finally adds the functionality that allows for withdrawals to process.
-* **Conversion to ETH-address-based withdrawals**. There are currently two types of withdrawal credentials that validators can have, defined by the first byte in the validator's `withdrawal_credentials`: `0x00` (withdrawal controlled by BLS pubkey) and `0x01` (the validator's balance withdraws to a specific ETH address). Capella adds a feature that lets `0x00` validators convert to `0x01`.
 * **Partial withdrawals**: validators with `0x01` withdrawal credentials and balances above 32 ETH get their excess balance withdrawn to their address. A "sweeping" procedure cycles through the full set of validators and reaches each validator once every ~4-8 days.
+* **Conversion to ETH-address-based withdrawals**. There are currently two types of withdrawal credentials that validators can have, defined by the first byte in the validator's `withdrawal_credentials`: `0x00` (withdrawal controlled by BLS pubkey) and `0x01` (the validator's balance withdraws to a specific ETH address). Capella adds a feature that lets `0x00` validators convert to `0x01`.
 
 Capella also makes a small technical change to how historical block and state root summaries are stored, to make it slightly easier for a node to verify things about ancient history that it no longer stores (or did not download yet because it fast-synced).
 
@@ -110,7 +110,11 @@ class Withdrawal(Container):
     amount: Gwei
 ```
 
-This is the object that contains withdrawals. Withdrawals are special because they move funds from the consensus layer to the execution layer, and so implementing them requires interaction between the two. There was a technical debate about whether to include withdrawals in the body at all: theoretically, one could imagine a design where the consensus portion of a block is processed first, it generates the list of withdrawals, and then that list is passed directly to the execution client and processed, without ever being serialized anywhere. It was ultimately decided to include the list of withdrawals in the `ExecutionPayload` (the portion of the block that goes to the execution client), because this strengthens modularity and separation of concerns, and particuarly allows for execution validity and consensus validity to be verified in an arbitrary order, with one shooting far ahead of the other.
+This is the object that contains a withdrawal. When the consensus layer detects that a validator is ready for withdrawing (using `is_fully_withdrawable_validator`), the validator's balance is withdrawn automatically.
+
+Withdrawals are special because they move funds from the consensus layer to the execution layer, and so implementing them requires interaction between the two. There was a technical debate between two different ways to implement this interaction. One approach was to avoid including withdrawals in the body at all: the consensus portion of a block is processed first, it generates the list of withdrawals, and then that list is passed directly to the execution client and processed, without ever being serialized anywhere. The other approach is to include the list of withdrawals in the `ExecutionPayload` (the portion of the block that goes to the execution client). Consensus clients would check that the provided list is correctly generated, and execution clients would process those withdrawals.
+
+We ultimately decided on the second approach, because it improves modularity and separation of concerns, and particuarly it allows for execution validity and consensus validity to be verified at different times. This is very valuable for optimized node syncing procedures.
 
 #### `BLSToExecutionChange`
 
@@ -256,7 +260,7 @@ class BeaconState(Container):
     current_sync_committee: SyncCommittee
     next_sync_committee: SyncCommittee
     # Execution
-    latest_execution_payload_header: ExecutionPayloadHeader
+    latest_execution_payload_header: ExecutionPayloadHeader  # [Modified in Capella]
     # Withdrawals
     next_withdrawal_index: WithdrawalIndex  # [New in Capella]
     next_withdrawal_validator_index: ValidatorIndex  # [New in Capella]
@@ -411,10 +415,9 @@ def get_expected_withdrawals(state: BeaconState) -> Sequence[Withdrawal]:
 ```python
 def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
     expected_withdrawals = get_expected_withdrawals(state)
-    assert len(payload.withdrawals) == len(expected_withdrawals)
+    assert payload.withdrawals == expected_withdrawals
 
-    for expected_withdrawal, withdrawal in zip(expected_withdrawals, payload.withdrawals):
-        assert withdrawal == expected_withdrawal
+    for withdrawal in expected_withdrawals:
         decrease_balance(state, withdrawal.validator_index, withdrawal.amount)
 
     # Update the next withdrawal index if this block contained withdrawals
@@ -434,21 +437,23 @@ def process_withdrawals(state: BeaconState, payload: ExecutionPayload) -> None:
         state.next_withdrawal_validator_index = next_validator_index
 ```
 
+The key things that we are doing here are (i) checking that the list of expected withdrawals generated by running the sweep (`get_expected_withdrawals`) is the same as the list in the payload, and (ii) actually processing those withdrawals.  
+
 #### Modified `process_execution_payload`
 
 *Note*: The function `process_execution_payload` is modified to use the new `ExecutionPayloadHeader` type.
 
 ```python
 def process_execution_payload(state: BeaconState, payload: ExecutionPayload, execution_engine: ExecutionEngine) -> None:
+    # [Modified in Capella] Removed `is_merge_transition_complete` check in Capella
     # Verify consistency of the parent hash with respect to the previous execution payload header
-    if is_merge_transition_complete(state):
-        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
+    assert payload.parent_hash == state.latest_execution_payload_header.block_hash
     # Verify prev_randao
     assert payload.prev_randao == get_randao_mix(state, get_current_epoch(state))
     # Verify timestamp
     assert payload.timestamp == compute_timestamp_at_slot(state, state.slot)
     # Verify the execution payload is valid
-    assert execution_engine.notify_new_payload(payload)
+    assert execution_engine.verify_and_notify_new_payload(NewPayloadRequest(execution_payload=payload))
     # Cache execution payload header
     state.latest_execution_payload_header = ExecutionPayloadHeader(
         parent_hash=payload.parent_hash,
@@ -515,6 +520,8 @@ def process_bls_to_execution_change(state: BeaconState,
         + address_change.to_execution_address
     )
 ```
+
+Processes requests to change a validator's withdrawal credentials from being a BLS key to being an eth1 address.
 
 ## Testing
 
