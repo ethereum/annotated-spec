@@ -36,7 +36,7 @@ This diagram shows the basic procedure by which a light client learns about more
 
 ![](lightsync.png)
 
-We assume a light client already has a block header at slot `N`, in period `X = N // 16384`. The light client wants to authenticate a block header somewhere in period `X+1`. The steps the light client needs to take are as follows:
+We assume a light client already has a block header at slot `N`, in period `X = N // 8192`. The light client wants to authenticate a block header somewhere in period `X+1`. The steps the light client needs to take are as follows:
 
 1. Use a Merkle branch to verify the `next_sync_committee` in the slot `N` post-state. This is the sync committee that will be signing block headers during period `X+1`.
 2. Download the aggregate signature of the newer header that the light client is trying to authenticate. This can be found in the child block of the newer block, or the information could be grabbed directly from the p2p network.
