@@ -114,7 +114,7 @@ This is the object that contains a withdrawal. When the consensus layer detects 
 
 Withdrawals are special because they move funds from the consensus layer to the execution layer, and so implementing them requires interaction between the two. There was a technical debate between two different ways to implement this interaction. One approach was to avoid including withdrawals in the body at all: the consensus portion of a block is processed first, it generates the list of withdrawals, and then that list is passed directly to the execution client and processed, without ever being serialized anywhere. The other approach is to include the list of withdrawals in the `ExecutionPayload` (the portion of the block that goes to the execution client). Consensus clients would check that the provided list is correctly generated, and execution clients would process those withdrawals.
 
-We ultimately decided on the second approach, because it improves modularity and separation of concerns, and particuarly it allows for execution validity and consensus validity to be verified at different times. This is very valuable for optimized node syncing procedures.
+We ultimately decided on the second approach, because it improves modularity and separation of concerns, and particularly it allows for execution validity and consensus validity to be verified at different times. This is very valuable for optimized node syncing procedures.
 
 #### `BLSToExecutionChange`
 
