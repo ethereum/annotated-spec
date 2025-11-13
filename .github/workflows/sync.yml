@@ -1,0 +1,23 @@
+name: Sync Specs
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Run sync script
+        run: ./scripts/sync.py
+      - name: Check if annotated specs are up to date
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git status --short
+            exit 1
+          fi
